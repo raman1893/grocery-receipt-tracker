@@ -1,5 +1,5 @@
 gradio>=4.44
-transformers>=4.49
+transformers>=4.57
 torch
 pandas
 plotly

@@ -1,4 +1,6 @@
 import os
+import re
+import json
 import sqlite3
 import datetime as dt
 
@@ -9,75 +11,110 @@ import gradio as gr
 import plotly.express as px
 import torch
 from PIL import ImageOps
-from transformers import AutoProcessor, AutoModelForImageTextToText, pipeline
+from transformers import AutoProcessor, AutoModelForImageTextToText
 
-from receipt_parser import parse_receipt, rule_category, CATEGORIES
+from receipt_parser import rule_category, CATEGORIES
 
 # ---------------- Config ----------------
 # On HF Spaces with persistent storage enabled, /data survives restarts.
 # GROCERY_DB lets the Colab notebook point this at Google Drive.
 DB_PATH = os.environ.get("GROCERY_DB") or (
     "/data/grocery.db" if os.path.isdir("/data") else "grocery.db")
-OCR_ID = "stepfun-ai/GOT-OCR-2.0-hf"        # reads all text on the receipt
-ZS_ID = "facebook/bart-large-mnli"          # fallback categorizer for unknown items
+# Free vision-language model on Hugging Face: looks at the photo and returns the receipt as JSON.
+# If the 4B model gives garbled output on Colab, change this to "Qwen/Qwen3-VL-2B-Instruct".
+MODEL_ID = os.environ.get("VLM_ID", "Qwen/Qwen3-VL-4B-Instruct")
+MAX_SIDE = 1792          # photo is shrunk to this many pixels on its longest side (keeps memory in check)
 COLUMNS = ["receipt_id", "receipt_date", "store", "item", "qty", "unit",
            "unit_price", "amount", "department", "category", "created_at"]
 
-# ---------------- Models ----------------
+# ---------------- Model ----------------
 device = "cuda" if torch.cuda.is_available() else "cpu"
-ocr_processor = AutoProcessor.from_pretrained(OCR_ID)
-ocr_model = AutoModelForImageTextToText.from_pretrained(OCR_ID).to(device).eval()
-# GPU: 16-bit halves memory use. CPU: needs 32-bit.
-ocr_model = ocr_model.half() if device == "cuda" else ocr_model.float()
-_classifier = None
+if device == "cpu":
+    print("WARNING: no GPU found. This model is very slow on a CPU; run it on Colab's GPU instead.")
+processor = AutoProcessor.from_pretrained(MODEL_ID)
+model = AutoModelForImageTextToText.from_pretrained(
+    MODEL_ID, dtype=torch.float16 if device == "cuda" else torch.float32).to(device).eval()
+
+PROMPT = f"""You are reading a photo of a grocery store receipt.
+Return ONLY a JSON object, with no other text, in exactly this structure:
+{{"store": "store name", "date": "YYYY-MM-DD",
+ "items": [{{"name": "item name as printed", "qty": 1, "unit": "ea", "unit_price": 0.00,
+            "amount": 0.00, "department": "", "category": ""}}],
+ "subtotal": 0.00, "tax": 0.00, "total": 0.00}}
+
+Rules:
+- One entry per purchased line. "amount" is the line total printed on the right.
+- Multi-buy lines like "2 @ $2.79  5.58": qty 2, unit "ea", unit_price 2.79, amount 5.58.
+- Weighed items like "0.925 kg @ $1.52/kg  1.41": qty 0.925, unit "kg", unit_price 1.52, amount 1.41.
+- "department" is the section header the item is printed under (e.g. "DAIRY"), or "" if there is none.
+- "category" must be one of: {", ".join(CATEGORIES)}.
+- Skip lines whose amount is 0.00, and skip subtotal, tax, total, payment and card lines.
+- Ignore faint mirrored text showing through from the back of the paper.
+- "tax" is the total sales tax (HST/GST/PST). Write numbers without $ signs. Use null if something is not printed."""
 
 
-def classifier():
-    """Loaded only the first time an item can't be categorized by rules."""
-    global _classifier
-    if _classifier is None:
-        _classifier = pipeline("zero-shot-classification", model=ZS_ID,
-                               device=0 if device == "cuda" else -1)
-    return _classifier
-
-
-def _ocr_once(image, patches):
-    if patches:   # read the receipt in sections plus an overview (sharper on long receipts)
-        inputs = ocr_processor(image, return_tensors="pt", crop_to_patches=True, max_patches=patches)
-    else:         # one pass over the whole image (lightest on memory)
-        inputs = ocr_processor(image, return_tensors="pt")
-    inputs = inputs.to(device, dtype=ocr_model.dtype)
-    with torch.inference_mode():
-        ids = ocr_model.generate(**inputs, do_sample=False, max_new_tokens=2048,
-                                 tokenizer=ocr_processor.tokenizer, stop_strings="<|im_end|>")
-    return ocr_processor.decode(ids[0, inputs["input_ids"].shape[1]:], skip_special_tokens=True)
-
-
-def run_ocr(image):
-    image = ImageOps.exif_transpose(image).convert("RGB")   # fix phone photo rotation
+def read_receipt(image):
+    """Send the photo to the model and return its raw text answer."""
+    image = ImageOps.exif_transpose(image).convert("RGB")      # fix phone photo rotation
+    image.thumbnail((MAX_SIDE, MAX_SIDE))
+    messages = [{"role": "user", "content": [{"type": "image", "image": image},
+                                             {"type": "text", "text": PROMPT}]}]
+    inputs = processor.apply_chat_template(messages, tokenize=True, add_generation_prompt=True,
+                                           return_dict=True, return_tensors="pt").to(device)
     try:
-        return _ocr_once(image, patches=2)
-    except torch.OutOfMemoryError:
-        print("GPU memory full, retrying in single-pass mode")
-        torch.cuda.empty_cache()
-        return _ocr_once(image, patches=0)
+        with torch.inference_mode():
+            out = model.generate(**inputs, max_new_tokens=2000, do_sample=False)
+        return processor.decode(out[0, inputs["input_ids"].shape[1]:], skip_special_tokens=True)
     finally:
         if device == "cuda":
-            torch.cuda.empty_cache()   # free memory for the next scan
+            torch.cuda.empty_cache()
 
 
-def categorize(df):
-    cats = [rule_category(n, d) for n, d in zip(df["item"], df["department"])]
-    unknown = [i for i, c in enumerate(cats) if c is None]
-    if unknown:
-        results = classifier()([df["item"].iloc[i] for i in unknown],
-                               candidate_labels=CATEGORIES,
-                               hypothesis_template="This grocery store item is {}.")
-        if isinstance(results, dict):
-            results = [results]
-        for i, r in zip(unknown, results):
-            cats[i] = r["labels"][0] if r["scores"][0] >= 0.25 else "Other"
-    return cats
+def _num(value):
+    if value is None:
+        return None
+    try:
+        return round(float(str(value).replace("$", "").replace(",", "").strip()), 3)
+    except ValueError:
+        return None
+
+
+def to_receipt(text):
+    """Turn the model's JSON answer into the structure the rest of the app uses."""
+    cleaned = re.sub(r"```(?:json)?", "", text)
+    start, end = cleaned.find("{"), cleaned.rfind("}")
+    if start == -1 or end == -1:
+        return None
+    try:
+        data = json.loads(cleaned[start:end + 1])
+    except json.JSONDecodeError:
+        return None
+
+    items = []
+    for it in data.get("items") or []:
+        if not isinstance(it, dict):
+            continue
+        name = str(it.get("name") or "").strip()
+        amount = _num(it.get("amount"))
+        if not name or not amount:                     # skip blanks and $0.00 lines
+            continue
+        dept = str(it.get("department") or "").strip().upper()
+        cat = str(it.get("category") or "").strip()
+        if cat not in CATEGORIES:                      # model gave no/unknown category: use rules
+            cat = rule_category(name, dept) or "Other"
+        items.append({"item": name, "qty": _num(it.get("qty")) or 1,
+                      "unit": str(it.get("unit") or "ea").lower(),
+                      "unit_price": _num(it.get("unit_price")), "amount": amount,
+                      "department": dept, "category": cat})
+
+    try:
+        receipt_date = dt.date.fromisoformat(str(data.get("date"))).isoformat()
+    except ValueError:
+        receipt_date = None
+    store = str(data.get("store") or "").strip() or None
+    return {"store": store, "date": receipt_date, "items": items,
+            "subtotal": _num(data.get("subtotal")), "tax": _num(data.get("tax")) or None,
+            "total": _num(data.get("total"))}
 
 
 # ---------------- Database ----------------
@@ -171,14 +208,13 @@ def scan(image, date_override, store_override):
     if image is None:
         return (gr.update(),) * 7
 
-    text = run_ocr(image)
-    r = parse_receipt(text)
-    if not r["items"]:
-        return (pd.DataFrame(), "⚠️ No items found. Check the raw text below, or retake "
-                "the photo flat, well lit and close up.", text, *dashboard())
+    text = read_receipt(image)
+    r = to_receipt(text)
+    if not r or not r["items"]:
+        return (pd.DataFrame(), "⚠️ Couldn't read items from this photo. Check the model output "
+                "below, or retake the photo flat, well lit and close up.", text, *dashboard())
 
     df = pd.DataFrame(r["items"])
-    df["category"] = categorize(df)
     df["department"] = df["department"].fillna("").str.title()
     if r["tax"]:
         df.loc[len(df)] = {"item": "Sales tax", "qty": 1, "unit": "ea", "unit_price": r["tax"],
@@ -228,7 +264,7 @@ with gr.Blocks(title="Grocery Receipt Tracker") as demo:
             with gr.Column():
                 status = gr.Markdown()
                 items = gr.Dataframe(label="Items from this receipt", interactive=False)
-                with gr.Accordion("Raw OCR text", open=False):
+                with gr.Accordion("Model output", open=False):
                     raw_text = gr.Textbox(lines=15, show_label=False)
 
     with gr.Tab("Dashboard"):
