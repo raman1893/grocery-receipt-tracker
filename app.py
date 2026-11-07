@@ -2,6 +2,8 @@ import os
 import sqlite3
 import datetime as dt
 
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
 import pandas as pd
 import gradio as gr
 import plotly.express as px
@@ -25,7 +27,8 @@ COLUMNS = ["receipt_id", "receipt_date", "store", "item", "qty", "unit",
 device = "cuda" if torch.cuda.is_available() else "cpu"
 ocr_processor = AutoProcessor.from_pretrained(OCR_ID)
 ocr_model = AutoModelForImageTextToText.from_pretrained(OCR_ID).to(device).eval()
-ocr_model = ocr_model.float()   # newer transformers loads 16-bit weights; use 32-bit everywhere
+# GPU: 16-bit halves memory use. CPU: needs 32-bit.
+ocr_model = ocr_model.half() if device == "cuda" else ocr_model.float()
 _classifier = None
 
 
@@ -38,15 +41,29 @@ def classifier():
     return _classifier
 
 
-def run_ocr(image):
-    image = ImageOps.exif_transpose(image).convert("RGB")   # fix phone photo rotation
-    # crop_to_patches lets the model read long receipts in sections
-    inputs = ocr_processor(image, return_tensors="pt",
-                           crop_to_patches=True, max_patches=4).to(device, dtype=ocr_model.dtype)
-    with torch.no_grad():
+def _ocr_once(image, patches):
+    if patches:   # read the receipt in sections plus an overview (sharper on long receipts)
+        inputs = ocr_processor(image, return_tensors="pt", crop_to_patches=True, max_patches=patches)
+    else:         # one pass over the whole image (lightest on memory)
+        inputs = ocr_processor(image, return_tensors="pt")
+    inputs = inputs.to(device, dtype=ocr_model.dtype)
+    with torch.inference_mode():
         ids = ocr_model.generate(**inputs, do_sample=False, max_new_tokens=2048,
                                  tokenizer=ocr_processor.tokenizer, stop_strings="<|im_end|>")
     return ocr_processor.decode(ids[0, inputs["input_ids"].shape[1]:], skip_special_tokens=True)
+
+
+def run_ocr(image):
+    image = ImageOps.exif_transpose(image).convert("RGB")   # fix phone photo rotation
+    try:
+        return _ocr_once(image, patches=2)
+    except torch.OutOfMemoryError:
+        print("GPU memory full, retrying in single-pass mode")
+        torch.cuda.empty_cache()
+        return _ocr_once(image, patches=0)
+    finally:
+        if device == "cuda":
+            torch.cuda.empty_cache()   # free memory for the next scan
 
 
 def categorize(df):
@@ -257,5 +274,5 @@ else:
         print(f"  Open on your phone:   http://{ip}:7860  (same Wi-Fi)")
     print("=" * 55 + "\n")
 
-demo.launch(server_name="0.0.0.0", share=SHARE,
+demo.launch(server_name="0.0.0.0", share=SHARE, show_error=True,
             auth=("receipts", PASSWORD) if PASSWORD else None)
