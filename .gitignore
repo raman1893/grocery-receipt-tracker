@@ -1,0 +1,18 @@
+# Python and environment clutter
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+
+# Your data: databases and exports
+*.db
+*.xlsx
+*.csv
+
+# Receipt photos
+*.jpg
+*.jpeg
+*.png
+*.heic
+
+# Secrets like passwords and tokens
+.env
