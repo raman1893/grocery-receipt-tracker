@@ -70,7 +70,9 @@ Rules:
 - Weighed items like "0.925 kg @ $1.52/kg  1.41": qty 0.925, unit "kg", unit_price 1.52, amount 1.41.
 - "department" is the section header the item is printed under (e.g. "DAIRY"), or "" if there is none.
 - "category" must be one of: {", ".join(CATEGORIES)}.
+- Small fees are purchases too: include reusable bags (e.g. "REUBL SHRT PC" under OTHER SERVICES), deposits and eco fees.
 - Skip lines whose amount is 0.00, and skip subtotal, tax, total, payment and card lines.
+- "date": take it from the printed 4-digit-year date such as 2026/10/18, not from the 2-digit "DateTime" line.
 - Ignore faint mirrored text showing through from the back of the paper.
 - "tax" is the total sales tax (HST/GST/PST). Write numbers without $ signs. Use null if something is not printed."""
 
@@ -119,7 +121,8 @@ def read_with_check(image):
                 f"{r['subtotal'] - gap:.2f}, but the printed subtotal is {r['subtotal']:.2f}. "
                 f"A line worth about {abs(gap):.2f} is "
                 f"{'missing' if gap > 0 else 'extra or misread'}. Look again carefully, "
-                f"especially at the first line under each header, and return the complete JSON.")
+                f"especially at the first line under each header and at small fees such as a reusable bag, "
+                f"and return the complete JSON.")
         text2 = read_receipt(image, hint)
         r2 = to_receipt(text2)
         gap2 = items_gap(r2)
@@ -232,16 +235,45 @@ def receipt_choices():
     return [(f"{nice_date(d)}, {s}, ${t:,.2f}", rid) for rid, d, s, t in rows]
 
 
-def delete_receipt(receipt_id):
-    if not receipt_id:
-        return ("Pick a receipt to delete first.", *refresh_all())
+def receipt_lines(receipt_ids):
+    if not receipt_ids:
+        return 0
     con = get_con()
     try:
-        n = con.execute("DELETE FROM expenses WHERE receipt_id = ?", (receipt_id,)).rowcount
+        marks = ",".join("?" * len(receipt_ids))
+        return con.execute(f"SELECT COUNT(*) FROM expenses WHERE receipt_id IN ({marks})",
+                           list(receipt_ids)).fetchone()[0]
+    finally:
+        con.close()
+
+
+def ask_delete(receipt_ids):
+    """First click: show a confirmation instead of deleting straight away."""
+    if not receipt_ids:
+        return gr.update(visible=False), "", "Tick at least one receipt first."
+    n = len(receipt_ids)
+    text = (f"**Delete {n} receipt{'s' if n > 1 else ''} and {receipt_lines(receipt_ids)} lines?** "
+            "This can't be undone.")
+    return gr.update(visible=True), text, ""
+
+
+def delete_receipts(receipt_ids):
+    if not receipt_ids:
+        return ("Tick at least one receipt first.", gr.update(visible=False), False, *refresh_all())
+    con = get_con()
+    try:
+        marks = ",".join("?" * len(receipt_ids))
+        lines = con.execute(f"DELETE FROM expenses WHERE receipt_id IN ({marks})", list(receipt_ids)).rowcount
         con.commit()
     finally:
         con.close()
-    return (f"Deleted the receipt and its {n} lines.", *refresh_all())
+    n = len(receipt_ids)
+    return (f"Deleted {n} receipt{'s' if n > 1 else ''} ({lines} lines).", gr.update(visible=False), False,
+            *refresh_all())
+
+
+def toggle_all(checked):
+    return gr.update(value=[rid for _, rid in receipt_choices()] if checked else [])
 
 
 def run_sql(query):
@@ -320,6 +352,12 @@ def dashboard():
     trend.update_yaxes(tickprefix="$", gridcolor=LINE, showgrid=True)
     trend.update_layout(bargap=0.55)
     trend.update_traces(hovertemplate="%{x}<br>$%{y:,.2f}<extra></extra>")
+    totals = monthly.groupby(["period", "month"], as_index=False)["amount"].sum().sort_values("period")
+    trend.add_trace(go.Scatter(                       # total label above each month's bar
+        x=totals["month"], y=totals["amount"], mode="text", showlegend=False, hoverinfo="skip",
+        text=[f"${t:,.2f}" for t in totals["amount"]], textposition="top center",
+        textfont=dict(size=13, color=INK)))
+    trend.update_yaxes(range=[0, totals["amount"].max() * 1.15])
     style(trend, "Month by month", height=360)
 
     items = df[df["category"] != "Tax"]
@@ -348,7 +386,7 @@ def records_table():
 
 
 def refresh_all():
-    return (*dashboard(), records_table(), gr.update(choices=receipt_choices(), value=None))
+    return (*dashboard(), records_table(), gr.update(choices=receipt_choices(), value=[]))
 
 
 def export_excel():
@@ -381,6 +419,13 @@ def process_receipt(image, date_override="", store_override=""):
         receipt_date = dt.date.fromisoformat((date_override or "").strip()).isoformat()
     except ValueError:
         receipt_date = r["date"] or dt.date.today().isoformat()
+    date_note = ""
+    if not (date_override or "").strip():
+        days_off = (dt.date.today() - dt.date.fromisoformat(receipt_date)).days
+        if days_off < -1 or days_off > 120:
+            date_note = (f"  \nThe date read was {nice_date(receipt_date)}, which looks unlikely. If it's wrong, "
+                         f"delete this receipt in Records and scan again with the date set under "
+                         f"\"Date or store wrong?\".")
     store = (store_override or "").strip() or r["store"] or "Unknown store"
 
     view = df[["item", "qty", "unit", "unit_price", "amount", "category"]].copy()
@@ -411,7 +456,9 @@ def process_receipt(image, date_override="", store_override=""):
     else:
         matched = False
         message += (f"  \nThe items add up to ${r['subtotal'] - gap:,.2f}, but the receipt's "
-                    f"subtotal is ${r['subtotal']:,.2f}. One line may have been missed.")
+                    f"subtotal is ${r['subtotal']:,.2f}, so a line worth about ${abs(gap):,.2f} "
+                    f"seems to be {'missing' if gap > 0 else 'extra or misread'}.")
+    message += date_note
     return {**base, "kind": "saved", "matched": matched, "message": message}
 
 
@@ -419,12 +466,13 @@ def scan(image, date_override, store_override):
     if image is None:
         return (gr.update(),) * 9
     res = process_receipt(image, date_override, store_override)
-    return (res["view"], res["message"], res["text"], *refresh_all())
+    view = res["view"]
+    return (gr.update(value=view, visible=not view.empty), res["message"], res["text"], *refresh_all())
 
 
 def read_many(files, progress=gr.Progress()):
     if not files:
-        return (pd.DataFrame(), "Add some receipt photos first.", *refresh_all())
+        return (gr.update(visible=False), "Add some receipt photos first.", *refresh_all())
     rows, saved, flagged = [], 0, 0
     for i, f in enumerate(files):
         path = f if isinstance(f, str) else f.name
@@ -447,7 +495,7 @@ def read_many(files, progress=gr.Progress()):
     note = f"**Saved {saved} of {len(files)} receipts.**"
     if flagged:
         note += f" {flagged} didn't match their subtotal; open the Records tab to check them."
-    return (summary, note, *refresh_all())
+    return (gr.update(value=summary, visible=True), note, *refresh_all())
 
 
 # ---------------- Look and feel ----------------
@@ -521,7 +569,7 @@ with gr.Blocks(title="Groceries") as demo:
             with gr.Column(scale=6):
                 status = gr.Markdown("Take a photo or drop one in. The receipt is read and saved "
                                      "automatically.", elem_id="status")
-                items = gr.Dataframe(label="Items", interactive=False, wrap=True)
+                items = gr.Dataframe(label="Items", interactive=False, wrap=True, visible=False)
                 with gr.Accordion("What the model read", open=False):
                     raw_text = gr.Textbox(lines=14, show_label=False)
 
@@ -531,7 +579,7 @@ with gr.Blocks(title="Groceries") as demo:
         files = gr.File(file_count="multiple", file_types=["image"], label="Receipt photos", height=200)
         read_btn = gr.Button("Read all receipts", variant="primary")
         batch_note = gr.Markdown()
-        batch_table = gr.Dataframe(interactive=False, wrap=True, label="Results")
+        batch_table = gr.Dataframe(interactive=False, wrap=True, label="Results", visible=False)
 
     with gr.Tab("Spending"):
         kpi = gr.HTML()
@@ -546,9 +594,14 @@ with gr.Blocks(title="Groceries") as demo:
         with gr.Row():
             export_btn = gr.Button("Download as Excel")
             file_out = gr.File(label="Excel file", height=80)
-        with gr.Accordion("Delete a receipt", open=False):
-            del_pick = gr.Dropdown(label="Receipt", choices=[])
-            del_btn = gr.Button("Delete this receipt", variant="stop")
+        with gr.Accordion("Delete receipts", open=False):
+            sel_all = gr.Checkbox(label="Select all", value=False)
+            del_pick = gr.CheckboxGroup(label="Receipts", choices=[])
+            del_btn = gr.Button("Delete selected", variant="stop")
+            with gr.Row(visible=False) as confirm_row:
+                confirm_text = gr.Markdown()
+                yes_btn = gr.Button("Yes, delete", variant="stop", scale=0, min_width=120)
+                no_btn = gr.Button("Cancel", scale=0, min_width=100)
             del_note = gr.Markdown()
         with gr.Accordion("Query with SQL", open=False):
             gr.Markdown("Everything lives in one table called `expenses`, with columns receipt_id, "
@@ -562,7 +615,10 @@ with gr.Blocks(title="Groceries") as demo:
     refresh_outputs = [kpi, pie, trend, top, records, del_pick]
     image.change(scan, [image, date_in, store_in], [items, status, raw_text, *refresh_outputs])
     read_btn.click(read_many, files, [batch_table, batch_note, *refresh_outputs])
-    del_btn.click(delete_receipt, del_pick, [del_note, *refresh_outputs])
+    sel_all.input(toggle_all, sel_all, del_pick)
+    del_btn.click(ask_delete, del_pick, [confirm_row, confirm_text, del_note])
+    yes_btn.click(delete_receipts, del_pick, [del_note, confirm_row, sel_all, *refresh_outputs])
+    no_btn.click(lambda: gr.update(visible=False), None, confirm_row)
     sql_btn.click(run_sql, sql_in, [sql_out, sql_note])
     export_btn.click(export_excel, None, file_out)
     demo.load(refresh_all, None, refresh_outputs)
