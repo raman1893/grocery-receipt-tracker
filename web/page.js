@@ -176,9 +176,27 @@ function scanResultHTML(res){
   if (res.text) html += `<details class="over"><summary>What the model read</summary><pre style="white-space:pre-wrap;font-size:12px;margin:10px 0 0">${esc(res.text)}</pre></details>`;
   return html;
 }
+async function call(fn, ...args){
+  const r = await server[fn](...args);
+  if (r === undefined || r === null) throw new Error("The app didn’t answer. If the Colab cell stopped or the connection dropped, start it again and reload this page.");
+  return r;
+}
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function readOne(file, date = "", store = ""){
   const up = await upload(file);
-  return await server.api_scan(up.path, date, store);
+  if (!up || !up.path) throw new Error("The photo didn’t upload. Check your connection and try again.");
+  const start = await call("api_scan_start", up.path, date, store);
+  const until = Date.now() + 6 * 60 * 1000;          // give up after 6 minutes
+  let misses = 0;
+  while (Date.now() < until){
+    await sleep(2000);
+    let s;
+    try { s = await call("api_scan_status", start.job); misses = 0; }
+    catch (err) { if (++misses >= 5) throw err; continue; }   // ride out short connection blips
+    if (s.state === "done") return s.result;
+    if (s.state === "missing") throw new Error("The app restarted while reading. Please scan the receipt again.");
+  }
+  throw new Error("Reading took longer than 6 minutes. Please try again.");
 }
 document.getElementById("scanFile").addEventListener("change", async e => {
   const f = e.target.files[0]; if (!f) return;
@@ -191,7 +209,7 @@ document.getElementById("scanFile").addEventListener("change", async e => {
     box.innerHTML = scanResultHTML(res);
     if (res.kind === "saved") await loadData();
   } catch (err) {
-    box.innerHTML = scanResultHTML({kind: "error", message: "Something went wrong while reading: " + (err && err.message || err)});
+    box.innerHTML = scanResultHTML({kind: "error", message: (err && err.message) || String(err)});
   } finally { clearInterval(t); e.target.value = ""; }
 });
 const drop = document.getElementById("scanDrop");
@@ -305,13 +323,13 @@ document.getElementById("delBtn").addEventListener("click", () => {
 document.getElementById("delNo").addEventListener("click", () => document.getElementById("delConfirm").classList.remove("show"));
 document.getElementById("delYes").addEventListener("click", async () => {
   const ids = [...document.querySelectorAll(".delPick:checked")].map(c => c.value);
-  try { const r = await server.api_delete(ids); await loadData();
+  try { const r = await call("api_delete", ids); await loadData();
     toast(`Deleted ${r.deleted} receipt${r.deleted === 1 ? "" : "s"} (${r.lines} lines).`);
   } catch (err) { toast("Couldn’t delete: " + (err && err.message || err)); }
 });
 document.getElementById("exportBtn").addEventListener("click", async () => {
   try {
-    const f = await server.api_export(), bytes = Uint8Array.from(atob(f.b64), c => c.charCodeAt(0));
+    const f = await call("api_export"), bytes = Uint8Array.from(atob(f.b64), c => c.charCodeAt(0));
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([bytes], {type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
     a.download = f.name; document.body.appendChild(a); a.click(); a.remove();
@@ -327,7 +345,7 @@ async function runSQL(){
   const q = document.getElementById("qSql").value, out = document.getElementById("qOut"), note = document.getElementById("qNote");
   note.textContent = "Running…";
   try {
-    const r = await server.api_sql(q);
+    const r = await call("api_sql", q);
     note.textContent = r.note || "";
     out.innerHTML = r.columns.length ? `<table><thead><tr>${r.columns.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${
       r.rows.map(row => `<tr>${row.map(c => `<td class="num">${c == null ? "" : esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>` : "";
@@ -370,7 +388,7 @@ function renderOptions(){
     `<div class="field"><label for="cb-${esc(c)}" style="display:flex;align-items:center;gap:6px"><span style="color:${cc(c)}">${ci(c)}</span>${esc(c)} ($ per month)</label><input id="cb-${esc(c)}" data-cat="${esc(c)}" type="number" min="0" step="5" value="${b}" class="num cbIn"></div>`).join("");
   const box = document.getElementById("qr");
   box.innerHTML = "";
-  server.api_phone_url(location.origin).then(url => {
+  call("api_phone_url", location.origin).then(url => {
     if (window.QRCode){ new QRCode(box, {text:url, width:168, height:168, colorDark:"#1F2A22", colorLight:"#FFFFFF"}); }
     else box.textContent = "QR code unavailable.";
     document.getElementById("qrUrl").textContent = url;
@@ -379,7 +397,7 @@ function renderOptions(){
 document.getElementById("saveBudgets").addEventListener("click", () => {
   BUDGET = Math.max(0, +document.getElementById("budgetIn").value || 0);
   document.querySelectorAll(".cbIn").forEach(i => CAT_BUDGETS[i.dataset.cat] = Math.max(0, +i.value || 0));
-  server.api_save_budgets(BUDGET, CAT_BUDGETS).then(() => toast("Budgets saved."))
+  call("api_save_budgets", BUDGET, CAT_BUDGETS).then(() => toast("Budgets saved."))
     .catch(err => toast("Couldn’t save budgets: " + (err && err.message || err)));
 });
 
@@ -400,7 +418,7 @@ menuBtn.addEventListener("click", () => { const o = side.classList.toggle("open"
 document.addEventListener("click", e => { if (side.classList.contains("open") && !side.contains(e.target) && !menuBtn.contains(e.target)) { side.classList.remove("open"); menuBtn.setAttribute("aria-expanded", "false"); } });
 let toastT; function toast(msg){ const t = document.getElementById("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 3200); }
 async function loadData(){
-  const d = await server.api_data();
+  const d = await call("api_data");
   RECEIPTS = d.receipts || []; BUDGET = d.budget || 0; STORAGE = d.storage || ""; CAT_BUDGETS = d.cat_budgets || {...DEFAULT_CAT_BUDGETS};
   const name = PAGES[location.hash.slice(1)] ? location.hash.slice(1) : "overview";
   if (name !== "scan" && name !== "upload") PAGES[name]();

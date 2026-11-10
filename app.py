@@ -781,6 +781,8 @@ def lan_ip():
 
 # ---------------- Functions the FreshAnalytics page calls ----------------
 import base64
+import threading
+import uuid
 from urllib.parse import urlparse
 
 DEFAULT_CAT_BUDGETS = {"Produce": 40, "Dairy & Eggs": 35, "Meat & Seafood": 35,
@@ -842,6 +844,37 @@ def api_scan(path, date_override="", store_override=""):
     return {"kind": res.get("kind"), "message": res.get("message", ""), "store": res.get("store"),
             "date": res.get("date"), "paid": _clean(res.get("paid")), "matched": res.get("matched"),
             "items": _clean(res.get("items")), "lines": lines, "text": res.get("text", "")}
+
+
+# A scan takes 30-60 s, too long to hold one request open through a share link.
+# So the page starts the scan, then checks back every few seconds for the result.
+_JOBS = {}
+_SCAN_LOCK = threading.Lock()          # one scan at a time on the GPU
+
+
+def api_scan_start(path, date_override="", store_override=""):
+    job = uuid.uuid4().hex
+    _JOBS[job] = {"state": "running"}
+
+    def work():
+        try:
+            with _SCAN_LOCK:
+                result = api_scan(path, date_override, store_override)
+        except Exception as e:
+            result = {"kind": "error", "message": f"Something went wrong while reading: {e}"}
+        _JOBS[job] = {"state": "done", "result": result}
+
+    threading.Thread(target=work, daemon=True).start()
+    return {"job": job}
+
+
+def api_scan_status(job):
+    j = _JOBS.get(job)
+    if j is None:
+        return {"state": "missing"}
+    if j["state"] == "done":
+        return {"state": "done", "result": _JOBS.pop(job)["result"]}
+    return {"state": "running"}
 
 
 def api_delete(ids):
@@ -922,6 +955,8 @@ def _page_fn(name, call):
 PAGE_FUNCTIONS = [
     _page_fn("api_data", lambda _=None: api_data()),
     _page_fn("api_scan", lambda args: api_scan(*(list(args) + ["", ""])[:3])),
+    _page_fn("api_scan_start", lambda args: api_scan_start(*(list(args) + ["", ""])[:3])),
+    _page_fn("api_scan_status", lambda job: api_scan_status(job)),
     _page_fn("api_delete", lambda ids: api_delete(ids)),
     _page_fn("api_sql", lambda query: api_sql(query)),
     _page_fn("api_export", lambda _=None: api_export()),
