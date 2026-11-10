@@ -14,5 +14,7 @@ __pycache__/
 *.png
 *.heic
 
-# Secrets like passwords and tokens
+# Secrets: database connection strings, passwords, tokens
 .env
+.env.*
+.env*

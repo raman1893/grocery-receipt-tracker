@@ -1,0 +1,332 @@
+<div class="fa" id="fa"><style>
+.fa{
+  --bg:#F3F5F2; --surface:#FFFFFF; --surface-2:#F7F9F6; --ink:#1F2A22; --muted:#66726A; --line:#E3E8E3;
+  --leaf:#2F7A3B; --leaf-ink:#FFFFFF; --leaf-soft:#E7F2E3; --leaf-text:#2F7A3B;
+  --amber-soft:#FBF0DC; --amber-text:#8A5A12; --red-soft:#FBE6E4; --red-text:#A8322B;
+  color-scheme: light;
+  background:var(--bg);color:var(--ink);font-family:Figtree,"Segoe UI",system-ui,-apple-system,sans-serif;
+  font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;min-height:100vh;
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  .fa{
+    --bg:#121614; --surface:#1A201C; --surface-2:#202722; --ink:#E7ECE8; --muted:#9AA59D; --line:#2C352F;
+    --leaf:#4E9B58; --leaf-ink:#0E130F; --leaf-soft:#20331F; --leaf-text:#8FCB8F;
+    --amber-soft:#3A2E17; --amber-text:#E8B866; --red-soft:#3A1E1C; --red-text:#F09A93;
+    color-scheme: dark;
+  }
+}
+
+.fa *,.fa *::before,.fa *::after{box-sizing:border-box}
+.num{font-variant-numeric:tabular-nums}
+.fa svg{display:block}
+.fa button,.fa input,.fa select,.fa textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--leaf);outline-offset:2px;border-radius:6px}
+
+/* ---------- shell ---------- */
+.shell{display:grid;grid-template-columns:236px minmax(0,1fr);min-height:100vh}
+.side{position:sticky;top:0;height:100vh;background:var(--surface);border-right:1px solid var(--line);padding:22px 14px;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:19px;padding:0 10px 22px;letter-spacing:-0.01em}
+.brand .mark{width:38px;height:38px;flex:none}.brand .mark svg{width:100%;height:100%}.brand b{color:var(--leaf-text);font-weight:700}
+.nav a{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;color:var(--muted);text-decoration:none;font-weight:500}
+.nav a svg{font-size:19px}
+.nav a:hover{background:var(--surface-2);color:var(--ink)}
+.nav a[aria-current="page"]{background:var(--leaf);color:var(--leaf-ink)}
+.side .spacer{flex:1}
+.side .foot{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+.main{padding:28px 32px 48px;max-width:1240px;width:100%}
+.topbar{display:none}
+
+/* ---------- page header ---------- */
+.ph{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.ph h1{margin:0;font-size:28px;font-weight:700;letter-spacing:-0.02em}
+.ph p{margin:4px 0 0;color:var(--muted)}
+.ctrls{display:flex;gap:8px;flex-wrap:wrap}
+.select{appearance:none;background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2366726A' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;border:1px solid var(--line);border-radius:10px;padding:8px 32px 8px 12px;font-weight:500;cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 14px;font-weight:600;cursor:pointer}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--leaf);border-color:var(--leaf);color:var(--leaf-ink)}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.danger{color:var(--red-text);border-color:var(--red-soft)}
+.btn svg{font-size:17px}
+
+/* ---------- panels ---------- */
+.panel{background:var(--surface);border-radius:16px;padding:18px 20px;border:1px solid var(--line)}
+.panel h2{margin:0 0 14px;font-size:16px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.panel h2 .aside{font-size:13px;font-weight:500;color:var(--muted)}
+.grid{display:grid;gap:14px}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g-wide{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}
+.stack>*+*{margin-top:14px}
+
+/* ---------- KPI ---------- */
+.kpi{display:flex;justify-content:space-between;gap:10px}
+.kpi .lab{color:var(--muted);font-weight:500;font-size:14px}
+.kpi .val{font-size:27px;font-weight:700;letter-spacing:-0.02em;margin:4px 0 8px}
+.kpi .ic{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:21px;color:#fff;flex:none}
+.chip{display:inline-flex;align-items:center;gap:4px;border-radius:7px;padding:2px 8px;font-size:12.5px;font-weight:600}
+.chip.good{background:var(--leaf-soft);color:var(--leaf-text)}
+.chip.warn{background:var(--amber-soft);color:var(--amber-text)}
+.chip.bad{background:var(--red-soft);color:var(--red-text)}
+.chip.plain{background:var(--surface-2);color:var(--muted)}
+.chip svg{font-size:13px}
+.kpi .sub{color:var(--muted);font-size:13px;margin-left:6px}
+
+/* ---------- welcome strip (the memorable element) ---------- */
+.welcome{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.produce{display:flex;gap:8px;flex-wrap:wrap}
+.produce span{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:21px}
+@media (prefers-reduced-motion: no-preference){
+  .produce span{animation:pop .5s cubic-bezier(.2,.9,.3,1.3) both}
+  .produce span:nth-child(2){animation-delay:.04s}.produce span:nth-child(3){animation-delay:.08s}.produce span:nth-child(4){animation-delay:.12s}
+  .produce span:nth-child(5){animation-delay:.16s}.produce span:nth-child(6){animation-delay:.2s}.produce span:nth-child(7){animation-delay:.24s}
+  .produce span:nth-child(8){animation-delay:.28s}.produce span:nth-child(9){animation-delay:.32s}
+  @keyframes pop{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
+}
+
+/* ---------- lists, bars, tables ---------- */
+.catrow{display:grid;grid-template-columns:28px minmax(90px,140px) minmax(0,1fr) 78px 42px;align-items:center;gap:10px;padding:6px 0}
+.catrow .ci{font-size:20px}
+.track{height:9px;border-radius:5px;background:var(--surface-2);overflow:hidden}
+.track i{display:block;height:100%;border-radius:5px}
+.right{text-align:right}
+.muted{color:var(--muted)}
+.legend{display:flex;flex-direction:column;gap:7px;flex:1;min-width:140px}
+.legend div{display:flex;align-items:center;gap:8px;font-size:14px}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.legend b{margin-left:auto;font-weight:600}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-weight:600;color:var(--leaf-text);background:var(--leaf-soft);padding:9px 10px;white-space:nowrap}
+th:first-child{border-radius:8px 0 0 8px}th:last-child{border-radius:0 8px 8px 0}
+td{padding:10px;border-bottom:1px solid var(--line);white-space:nowrap}
+tr.click{cursor:pointer}tr.click:hover td{background:var(--surface-2)}
+.ins{display:flex;gap:12px;align-items:flex-start;padding:7px 0}
+.ins .ic{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:17px;flex:none}
+.ins b{font-weight:600;display:block}
+.budget-row{display:flex;justify-content:space-between;font-size:14px;margin-bottom:6px}
+
+/* ---------- scan / upload ---------- */
+.drop{border:2px dashed var(--line);border-radius:16px;padding:44px 20px;text-align:center;background:var(--surface);cursor:pointer;transition:border-color .15s}
+.drop:hover,.drop.over{border-color:var(--leaf)}
+.drop .big{width:64px;height:64px;border-radius:50%;background:var(--leaf-soft);color:var(--leaf-text);display:grid;place-items:center;font-size:30px;margin:0 auto 12px}
+.drop h3{margin:0 0 4px;font-size:18px}
+.preview{max-height:420px;width:100%;object-fit:contain;border-radius:12px;background:var(--surface-2)}
+.status{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:12px;margin-bottom:14px}
+.status.ok{background:var(--leaf-soft);color:var(--leaf-text)}
+.status.info{background:var(--surface-2);color:var(--muted)}
+.status svg{font-size:20px;flex:none;margin-top:1px}
+.bar{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--leaf);transition:width .3s}
+.search{position:relative;flex:1;min-width:200px;max-width:360px}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.search input{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 12px 9px 36px}
+.check{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.check input{width:17px;height:17px;accent-color:var(--leaf)}
+.confirm{display:none;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border-radius:12px;background:var(--red-soft);color:var(--red-text);margin-top:12px}
+.confirm.show{display:flex}
+.qbtns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.code{font-family:"SFMono-Regular",Consolas,monospace;font-size:13px;background:var(--surface-2);border-radius:10px;padding:12px 14px;white-space:pre;overflow-x:auto;margin-bottom:12px}
+.pantry-card{border-radius:14px;padding:16px;border:1px solid var(--line);background:var(--surface)}
+.pantry-card.due{background:var(--amber-soft);border-color:transparent}
+.pantry-card .pi{font-size:26px;margin-bottom:8px}
+.pantry-card b{display:block;font-size:16px}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.field input{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 12px;max-width:200px}
+#qr{background:#fff;padding:12px;border-radius:12px;display:inline-block}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:12px;font-weight:500;opacity:0;pointer-events:none;transition:.25s;z-index:50;max-width:90vw}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.page{display:none}.page.on{display:block}
+.empty{padding:30px;text-align:center;color:var(--muted)}
+
+/* ---------- small screens ---------- */
+@media (max-width: 1100px){ .g4{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width: 860px){
+  .shell{grid-template-columns:1fr}
+  .topbar{display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:30;background:var(--surface);border-bottom:1px solid var(--line);padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top,0px))}
+  .topbar .brand{padding:0;font-size:17px}
+  .topbar .brand .mark{width:32px;height:32px}
+  .side{position:fixed;left:0;top:0;bottom:0;width:260px;z-index:40;transform:translateX(-100%);transition:transform .2s;padding-top:calc(22px + env(safe-area-inset-top,0px))}
+  .side.open{transform:none;box-shadow:0 0 0 100vmax rgba(0,0,0,.35)}
+  .main{padding:18px 16px 40px}
+  .g2,.g-wide{grid-template-columns:1fr}
+  .catrow{grid-template-columns:24px 1fr 70px;}
+  .catrow .track,.catrow .pct{display:none}
+  .ph h1{font-size:24px}
+}
+@media (max-width: 480px){ .g4{grid-template-columns:1fr 1fr} .kpi .val{font-size:22px} .kpi .ic{width:34px;height:34px;font-size:17px} }
+
+
+.fa textarea.sql{width:100%;min-height:110px;border:1px solid var(--line);background:var(--surface-2);border-radius:10px;padding:12px 14px;font-family:"SFMono-Regular",Consolas,monospace;font-size:13px;margin-bottom:10px;resize:vertical}
+.fa details.over{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.fa details.over summary{cursor:pointer;font-weight:500}
+.fa details.over .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.fa details.over input{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 12px;flex:1;min-width:150px}
+.fa .status.warn{background:var(--amber-soft);color:var(--amber-text)}
+.fa .status.err{background:var(--red-soft);color:var(--red-text)}
+.fa .status b{font-weight:600}
+.fa .loading{padding:60px 20px;text-align:center;color:var(--muted)}
+</style>
+<div class="topbar">
+  <button class="btn" id="menuBtn" aria-label="Open menu" aria-expanded="false" style="padding:8px"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M4 6l16 0"></path><path d="M4 12l16 0"></path><path d="M4 18l16 0"></path></svg></button>
+  <div class="brand"><span class="mark"><svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="20" cy="20" r="20" fill="#EEF6EA"/><ellipse cx="20" cy="34.2" rx="15" ry="3.1" fill="#7DBB55"/><ellipse cx="20" cy="33.7" rx="7.6" ry="1.7" fill="#5C9A3D"/><path d="M20.4 33.6V21.5" stroke="#6B4A2E" stroke-width="2.4" stroke-linecap="round"/><path d="M20.4 24.5l-3.6-3.2M20.4 23.4l3.4-2.9" stroke="#6B4A2E" stroke-width="1.3" stroke-linecap="round" fill="none"/><g fill="#3F8A2E"><circle cx="12.4" cy="17.8" r="5.4"/><circle cx="28" cy="17.4" r="5.6"/><circle cx="20.2" cy="20.6" r="6"/></g><g fill="#5FA83E"><circle cx="14" cy="12.6" r="5.8"/><circle cx="26" cy="12.4" r="5.8"/><circle cx="20" cy="8.6" r="6.2"/><circle cx="20" cy="15.6" r="7"/></g><g fill="#8CC84B"><circle cx="17.4" cy="8.4" r="2.8"/><circle cx="12.6" cy="12.4" r="2.2"/><circle cx="23.4" cy="11.2" r="2.4"/></g></svg></span><span>Fresh<b>Analytics</b></span></div>
+</div>
+<div class="shell">
+  <aside class="side" id="side" aria-label="Main">
+    <div class="brand"><span class="mark"><svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="20" cy="20" r="20" fill="#EEF6EA"/><ellipse cx="20" cy="34.2" rx="15" ry="3.1" fill="#7DBB55"/><ellipse cx="20" cy="33.7" rx="7.6" ry="1.7" fill="#5C9A3D"/><path d="M20.4 33.6V21.5" stroke="#6B4A2E" stroke-width="2.4" stroke-linecap="round"/><path d="M20.4 24.5l-3.6-3.2M20.4 23.4l3.4-2.9" stroke="#6B4A2E" stroke-width="1.3" stroke-linecap="round" fill="none"/><g fill="#3F8A2E"><circle cx="12.4" cy="17.8" r="5.4"/><circle cx="28" cy="17.4" r="5.6"/><circle cx="20.2" cy="20.6" r="6"/></g><g fill="#5FA83E"><circle cx="14" cy="12.6" r="5.8"/><circle cx="26" cy="12.4" r="5.8"/><circle cx="20" cy="8.6" r="6.2"/><circle cx="20" cy="15.6" r="7"/></g><g fill="#8CC84B"><circle cx="17.4" cy="8.4" r="2.8"/><circle cx="12.6" cy="12.4" r="2.2"/><circle cx="23.4" cy="11.2" r="2.4"/></g></svg></span><span>Fresh<b>Analytics</b></span></div>
+    <nav class="nav" id="nav">
+      <a href="#overview" data-page="overview"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1"></path><path d="M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"></path><path d="M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1"></path><path d="M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"></path></svg>Overview</a>
+      <a href="#scan" data-page="scan"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"></path><path d="M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"></path></svg>Scan</a>
+      <a href="#upload" data-page="upload"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M15 8h.01"></path><path d="M12.5 21h-6.5a3 3 0 0 1 -3 -3v-12a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v6.5"></path><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l4 4"></path><path d="M14 14l1 -1c.67 -.644 1.45 -.824 2.182 -.54"></path><path d="M16 19h6"></path><path d="M19 16v6"></path></svg>Upload several</a>
+      <a href="#analytics" data-page="analytics"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M10 3.2a9 9 0 1 0 10.8 10.8a1 1 0 0 0 -1 -1h-3.8a4.1 4.1 0 1 1 -5 -5v-4a.9 .9 0 0 0 -1 -.8"></path><path d="M15 3.5a9 9 0 0 1 5.5 5.5h-4.5a9 9 0 0 0 -1 -1v-4.5"></path></svg>Spend Analytics</a>
+      <a href="#reports" data-page="reports"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M14 3v4a1 1 0 0 0 1 1h4"></path><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2"></path><path d="M9 9l1 0"></path><path d="M9 13l6 0"></path><path d="M9 17l6 0"></path></svg>Reports</a>
+      <a href="#pantry" data-page="pantry"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 5a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2l0 -14"></path><path d="M5 10h14"></path><path d="M9 13v3"></path><path d="M9 6v1"></path></svg>Pantry</a>
+    </nav>
+    <div class="spacer"></div>
+    <nav class="nav foot">
+      <a href="#options" data-page="options"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M12 6a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path><path d="M4 6l8 0"></path><path d="M16 6l4 0"></path><path d="M6 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path><path d="M4 12l2 0"></path><path d="M10 12l10 0"></path><path d="M15 18a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path><path d="M4 18l11 0"></path><path d="M19 18l1 0"></path></svg>Options</a>
+    </nav>
+  </aside>
+
+  <main class="main" id="main"><div class="loading" id="faLoading">Loading your receipts…</div>
+    <!-- OVERVIEW -->
+    <section class="page" id="p-overview">
+      <div class="panel welcome" style="margin-bottom:14px">
+        <div><h1 style="margin:0;font-size:28px;font-weight:700;letter-spacing:-0.02em">Overview</h1>
+          <p class="muted" style="margin:4px 0 0">Your grocery spending at a glance.</p></div>
+        <div class="produce" aria-hidden="true">
+          <span style="background:#FCE7D6;color:#D9631E"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3 21s9.834 -3.489 12.684 -6.34a4.487 4.487 0 0 0 0 -6.344a4.483 4.483 0 0 0 -6.342 0c-2.86 2.861 -6.347 12.689 -6.347 12.689l.005 -.005"></path><path d="M9 13l-1.5 -1.5"></path><path d="M16 14l-2 -2"></path><path d="M22 8s-1.14 -2 -3 -2c-1.406 0 -3 2 -3 2s1.14 2 3 2s3 -2 3 -2"></path><path d="M16 2s-2 1.14 -2 3s2 3 2 3s2 -1.577 2 -3c0 -1.86 -2 -3 -2 -3"></path></svg></span>
+          <span style="background:#FBE3E1;color:#C2453D"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M4 11.319c0 3.102 .444 5.319 2.222 7.978c1.351 1.797 3.156 2.247 5.08 .988c.426 -.268 .97 -.268 1.397 0c1.923 1.26 3.728 .809 5.079 -.988c1.778 -2.66 2.222 -4.876 2.222 -7.977c0 -2.661 -1.99 -5.32 -4.444 -5.32c-1.267 0 -2.41 .693 -3.22 1.44a.5 .5 0 0 1 -.672 0c-.809 -.746 -1.953 -1.44 -3.22 -1.44c-2.454 0 -4.444 2.66 -4.444 5.319"></path><path d="M7 12c0 -1.47 .454 -2.34 1.5 -3"></path><path d="M12 7c0 -1.2 .867 -4 3 -4"></path></svg></span>
+          <span style="background:#FBF3CF;color:#B08A0A"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M17.536 3.393c3.905 3.906 3.905 10.237 0 14.143c-3.906 3.905 -10.237 3.905 -14.143 0l14.143 -14.143"></path><path d="M5.868 15.06a6.5 6.5 0 0 0 9.193 -9.192"></path><path d="M10.464 10.464l4.597 4.597"></path><path d="M10.464 10.464v6.364"></path><path d="M10.464 10.464h6.364"></path></svg></span>
+          <span style="background:#E3F1DD;color:#4E8C3A"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M4 11h16a1 1 0 0 1 1 1v.5c0 1.5 -2.517 5.573 -4 6.5v1a1 1 0 0 1 -1 1h-8a1 1 0 0 1 -1 -1v-1c-1.687 -1.054 -4 -5 -4 -6.5v-.5a1 1 0 0 1 1 -1"></path><path d="M18.5 11c.351 -1.017 .426 -2.236 .5 -3.714v-1.286h-2.256c-2.83 0 -4.616 .804 -5.64 2.076"></path><path d="M5.255 11.008a12.204 12.204 0 0 1 -.255 -2.008v-1h1.755c.98 0 1.801 .124 2.479 .35"></path><path d="M8 8l1 -4l4 2.5"></path><path d="M13 11v-.5a2.5 2.5 0 1 0 -5 0v.5"></path></svg></span>
+          <span style="background:#FBE3E1;color:#C2453D"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M13 11c0 2.21 -2.239 4 -5 4s-5 -1.79 -5 -4a8 8 0 1 0 16 0a3 3 0 0 0 -6 0"></path><path d="M16 8c0 -2 2 -4 4 -4"></path></svg></span>
+          <span style="background:#E3EEF9;color:#3E7CC2"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M8 6h8v-2a1 1 0 0 0 -1 -1h-6a1 1 0 0 0 -1 1v2"></path><path d="M16 6l1.094 1.759a6 6 0 0 1 .906 3.17v8.071a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2v-8.071a6 6 0 0 1 .906 -3.17l1.094 -1.759"></path><path d="M10 16a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path><path d="M10 10h4"></path></svg></span>
+          <span style="background:#F7EBD6;color:#A5752A"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M19 14.083c0 4.154 -2.966 6.74 -7 6.917c-4.2 0 -7 -2.763 -7 -6.917c0 -5.538 3.5 -11.09 7 -11.083c3.5 .007 7 5.545 7 11.083"></path></svg></span>
+          <span style="background:#F7EBD6;color:#A5752A"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M18 4a3 3 0 0 1 2 5.235v8.765a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-8.764a3 3 0 0 1 1.824 -5.231h12.176v-.005"></path></svg></span>
+          <span style="background:#EDE7F6;color:#7A55B5"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M20 11.1c0 -4.474 -3.582 -8.1 -8 -8.1s-8 3.626 -8 8.1a.9 .9 0 0 0 .9 .9h14.2a.9 .9 0 0 0 .9 -.9"></path><path d="M10 12v7a2 2 0 1 0 4 0v-7"></path></svg></span>
+        </div>
+        <select class="select" id="ovMonth" aria-label="Month"></select>
+      </div>
+      <div class="grid g4" id="ovKpis" style="margin-bottom:14px"></div>
+      <div class="grid g-wide" style="margin-bottom:14px">
+        <div class="panel"><h2>Spend per trip <span class="aside">last 6 trips</span></h2><div id="ovTrips"></div></div>
+        <div class="panel"><h2>Where it goes <span class="aside" id="ovDonutLabel"></span></h2><div id="ovDonut" style="display:flex;align-items:center;gap:18px;flex-wrap:wrap"></div></div>
+      </div>
+      <div class="grid g-wide" style="margin-bottom:14px">
+        <div class="panel"><h2>Recent receipts <a href="#reports" class="aside" style="color:var(--leaf-text);text-decoration:none">See all</a></h2><div class="tablewrap" id="ovRecent"></div></div>
+        <div class="panel"><h2>Quick insights</h2><div id="ovInsights"></div></div>
+      </div>
+      <div class="panel"><h2>Category budgets <a href="#options" class="aside" style="color:var(--leaf-text);text-decoration:none">Edit</a></h2><div class="grid g4" id="ovBudgets"></div></div>
+    </section>
+
+    <!-- SCAN -->
+    <section class="page" id="p-scan">
+      <div class="ph"><div><h1>Scan</h1><p>Take a photo of a receipt, or drop one in. It’s read and saved automatically.</p></div></div>
+      <div class="grid g2">
+        <div>
+          <label class="drop" id="scanDrop" for="scanFile">
+            <div class="big"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"></path><path d="M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"></path></svg></div>
+            <h3>Take or choose a photo</h3>
+            <div class="muted">Flat, in good light, the whole receipt in frame</div>
+          </label>
+          <input type="file" id="scanFile" accept="image/*" capture="environment" hidden>
+          <details class="over"><summary>Date or store wrong? Set them here</summary>
+            <div class="row"><input id="scanDate" placeholder="Date, YYYY-MM-DD (blank: read it)" aria-label="Date">
+            <input id="scanStore" placeholder="Store (blank: read it)" aria-label="Store"></div></details>
+          <img id="scanPreview" class="preview" alt="Receipt photo" hidden style="margin-top:14px">
+        </div>
+        <div class="panel" id="scanResult">
+          <div class="status info"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16l-3 -2l-2 2l-2 -2l-2 2l-2 -2l-3 2m4 -14h6m-6 4h6m-2 4h2"></path></svg><div>Your items appear here after a scan. Reading takes about 30 to 60 seconds.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- UPLOAD -->
+    <section class="page" id="p-upload">
+      <div class="ph"><div><h1>Upload several</h1><p>Add a handful of receipt photos at once. Each takes about half a minute to read.</p></div></div>
+      <label class="drop" for="bulkFile" style="margin-bottom:14px;display:block">
+        <div class="big"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M7 18a4.6 4.4 0 0 1 0 -9a5 4.5 0 0 1 11 2h1a3.5 3.5 0 0 1 0 7h-1"></path><path d="M9 15l3 -3l3 3"></path><path d="M12 12l0 9"></path></svg></div>
+        <h3>Choose receipt photos</h3>
+        <div class="muted">Select 5 or 6 at a time</div>
+      </label>
+      <input type="file" id="bulkFile" accept="image/*" multiple hidden>
+      <div class="panel" id="bulkPanel" hidden>
+        <h2>Results <span class="aside" id="bulkCount"></span></h2>
+        <div class="bar" style="margin-bottom:14px"><i id="bulkBar" style="width:0"></i></div>
+        <div class="tablewrap" id="bulkTable"></div>
+      </div>
+    </section>
+
+    <!-- ANALYTICS -->
+    <section class="page" id="p-analytics">
+      <div class="ph"><div><h1>Spend Analytics</h1><p>Where your grocery money goes, and how it changes.</p></div>
+        <div class="ctrls">
+          <select class="select" id="anPeriod" aria-label="Period"></select>
+          <select class="select" id="anStore" aria-label="Store"></select>
+          <select class="select" id="anCat" aria-label="Category"></select>
+        </div></div>
+      <div class="grid g4" id="anKpis" style="margin-bottom:14px"></div>
+      <div class="grid g-wide" style="margin-bottom:14px">
+        <div class="panel"><h2>Month by month</h2><div id="anMonthly"></div></div>
+        <div class="panel"><h2>Most spent on</h2><div id="anTop"></div></div>
+      </div>
+      <div class="panel" style="margin-bottom:14px"><h2>By category <span class="aside">select one to look closer</span></h2><div id="anCats"></div></div>
+      <div class="panel" id="anDrill" hidden></div>
+    </section>
+
+    <!-- REPORTS -->
+    <section class="page" id="p-reports">
+      <div class="ph"><div><h1>Reports</h1><p>Every line from every receipt, plus export, delete and saved questions.</p></div>
+        <div class="ctrls"><button class="btn" id="exportBtn"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"></path><path d="M7 11l5 5l5 -5"></path><path d="M12 4l0 12"></path></svg>Download as Excel</button></div></div>
+      <div class="panel" style="margin-bottom:14px">
+        <h2><span>All items</span><span class="search"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"></path><path d="M21 21l-6 -6"></path></svg><input id="repSearch" placeholder="Search items, stores or categories" aria-label="Search"></span></h2>
+        <div class="tablewrap" id="repTable" style="max-height:440px;overflow-y:auto"></div>
+      </div>
+      <div class="grid g2">
+        <div class="panel"><h2>Delete receipts</h2>
+          <label class="check" style="font-weight:600"><input type="checkbox" id="selAll">Select all</label>
+          <div id="delList"></div>
+          <button class="btn danger" id="delBtn" style="margin-top:12px"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M4 7l16 0"></path><path d="M10 11l0 6"></path><path d="M14 11l0 6"></path><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"></path><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"></path></svg>Delete selected</button>
+          <div class="confirm" id="delConfirm"><span id="delText"></span><span style="flex:1"></span>
+            <button class="btn" id="delNo">Cancel</button><button class="btn primary" id="delYes" style="background:var(--red-text);border-color:var(--red-text)">Yes, delete</button></div>
+        </div>
+        <div class="panel"><h2>Ask with SQL <span class="aside">read-only</span></h2>
+          <div class="qbtns" id="qBtns"></div>
+          <textarea class="sql" id="qSql" spellcheck="false" aria-label="SQL query"></textarea>
+          <button class="btn primary" id="qRun" style="margin-bottom:12px"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 12l5 5l10 -10"></path></svg>Run query</button>
+          <p class="muted" id="qNote" style="margin:0 0 8px;font-size:13px"></p>
+          <div class="tablewrap" id="qOut"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANTRY -->
+    <section class="page" id="p-pantry">
+      <div class="ph"><div><h1>Pantry</h1><p>What you’re likely to run out of, based on how often you buy it.</p></div></div>
+      <div class="panel" style="margin-bottom:14px"><h2>Running low soon</h2><div class="grid g4" id="pantryDue"></div></div>
+      <div class="panel"><h2>Still learning <span class="aside">predictions start after 2 purchases</span></h2><div id="pantryLearning" class="muted"></div></div>
+    </section>
+
+    <!-- OPTIONS -->
+    <section class="page" id="p-options">
+      <div class="ph"><div><h1>Options</h1><p>Budgets, and opening the app on your phone.</p></div></div>
+      <div class="grid g2">
+        <div class="panel"><h2>Budgets</h2>
+          <div class="field"><label for="budgetIn">Monthly grocery budget ($)</label><input id="budgetIn" type="number" min="0" step="5" class="num"></div>
+          <div id="catBudgets"></div>
+          <button class="btn primary" id="saveBudgets"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 12l5 5l10 -10"></path></svg>Save budgets</button>
+        </div>
+        <div class="stack"><div class="panel"><h2>Where your records are saved</h2><p class="muted" id="storageNote" style="margin:0">Checking…</p></div>
+        <div class="panel"><h2>Open on your phone</h2>
+          <p class="muted" style="margin-top:0">Point your phone’s camera at this code.</p>
+          <div id="qr"></div>
+          <p class="muted num" id="qrUrl" style="word-break:break-all;font-size:13px"></p>
+        </div></div>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+</div>

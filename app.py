@@ -182,120 +182,203 @@ def to_receipt(text):
             "total": _num(data.get("total"))}
 
 
-# ---------------- Database ----------------
-def get_con():
-    con = sqlite3.connect(DB_PATH)
-    con.execute("""CREATE TABLE IF NOT EXISTS expenses (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, receipt_id TEXT, receipt_date TEXT,
-        store TEXT, item TEXT, qty REAL, unit TEXT, unit_price REAL, amount REAL,
-        department TEXT, category TEXT, created_at TEXT)""")
-    con.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")
-    existing = {row[1] for row in con.execute("PRAGMA table_info(expenses)")}
-    for col in ("unit", "unit_price", "department"):            # upgrade older databases
-        if col not in existing:
-            con.execute(f"ALTER TABLE expenses ADD COLUMN {col} "
-                        f"{'REAL' if col == 'unit_price' else 'TEXT'}")
-    return con
+# ---------------- Database: Neon (PostgreSQL) when a connection string is set, otherwise SQLite ----------------
+import ssl
+from decimal import Decimal
+from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
+from sqlalchemy import create_engine, text, inspect, bindparam
+
+
+def _load_env_files():
+    """Read .env.local / .env next to app.py (never committed to GitHub)."""
+    here = Path(__file__).resolve().parent
+    for name in (".env.local", ".env"):
+        p = here / name
+        if not p.exists():
+            continue
+        for line in p.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            k = k.strip().removeprefix("export ").strip()
+            os.environ.setdefault(k, v.strip().strip('"').strip("'"))
+
+
+_load_env_files()
+
+
+def database_url():
+    for key in ("DATABASE_URL", "POSTGRES_URL", "NEON_DATABASE_URL"):
+        if os.environ.get(key, "").strip():
+            return os.environ[key].strip()
+    return None
+
+
+_ENGINES = {}
+
+
+def _postgres_engine(url):
+    parts = urlsplit(url)
+    q = dict(parse_qsl(parts.query))
+    use_ssl = q.pop("sslmode", "require") != "disable"
+    for k in ("channel_binding", "options", "sslrootcert", "sslcert", "sslkey"):
+        q.pop(k, None)
+    clean = urlunsplit(("postgresql+pg8000", parts.netloc, parts.path, urlencode(q), ""))
+    args = {"ssl_context": ssl.create_default_context()} if use_ssl else {}
+    return create_engine(clean, connect_args=args, pool_pre_ping=True, pool_recycle=300)
+
+
+SCHEMA = {
+    "sqlite": [
+        """CREATE TABLE IF NOT EXISTS expenses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, receipt_id TEXT, receipt_date TEXT, store TEXT,
+            item TEXT, qty REAL, unit TEXT, unit_price REAL, amount REAL, department TEXT,
+            category TEXT, created_at TEXT)""",
+        "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)",
+        "CREATE TABLE IF NOT EXISTS receipt_info (receipt_id TEXT PRIMARY KEY, subtotal REAL, total REAL)",
+    ],
+    "postgres": [
+        """CREATE TABLE IF NOT EXISTS expenses (
+            id SERIAL PRIMARY KEY, receipt_id TEXT, receipt_date TEXT, store TEXT,
+            item TEXT, qty NUMERIC(12,3), unit TEXT, unit_price NUMERIC(12,3), amount NUMERIC(12,2),
+            department TEXT, category TEXT, created_at TEXT)""",
+        "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)",
+        "CREATE TABLE IF NOT EXISTS receipt_info (receipt_id TEXT PRIMARY KEY, subtotal NUMERIC(12,2), total NUMERIC(12,2))",
+    ],
+}
+
+
+def get_engine():
+    """One engine per database; created on first use (demo_app can change DB_PATH before that)."""
+    url = database_url()
+    key = url or f"sqlite:{DB_PATH}"
+    if key not in _ENGINES:
+        if url:
+            eng, kind = _postgres_engine(url), "postgres"
+        else:
+            eng, kind = create_engine(f"sqlite:///{DB_PATH}"), "sqlite"
+        with eng.begin() as c:
+            for ddl in SCHEMA[kind]:
+                c.execute(text(ddl))
+            have = {col["name"] for col in inspect(c).get_columns("expenses")}
+            for col, typ in (("unit", "TEXT"), ("unit_price", "REAL"), ("department", "TEXT")):
+                if col not in have:                       # upgrade older databases
+                    c.execute(text(f"ALTER TABLE expenses ADD COLUMN {col} {typ}"))
+        eng.kind = kind
+        _ENGINES[key] = eng
+    return _ENGINES[key]
+
+
+def storage_kind():
+    return get_engine().kind
+
+
+def db_rows(sql, **params):
+    q = text(sql)
+    for k, v in params.items():
+        if isinstance(v, (list, tuple)):
+            q = q.bindparams(bindparam(k, expanding=True))
+    with get_engine().connect() as c:
+        return c.execute(q, params).fetchall()
+
+
+def db_run(sql, **params):
+    q = text(sql)
+    for k, v in params.items():
+        if isinstance(v, (list, tuple)):
+            q = q.bindparams(bindparam(k, expanding=True))
+    with get_engine().begin() as c:
+        return c.execute(q, params).rowcount
 
 
 def load_all():
-    con = get_con()
-    try:
-        return pd.read_sql("SELECT * FROM expenses ORDER BY receipt_date", con)
-    finally:
-        con.close()
+    with get_engine().connect() as c:
+        df = pd.read_sql(text("SELECT * FROM expenses ORDER BY receipt_date, id"), c)
+    for col in ("qty", "unit_price", "amount"):
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+    return df
 
 
 def is_duplicate(receipt_date, store, amount):
-    con = get_con()
-    try:
-        rows = con.execute("""SELECT SUM(amount) FROM expenses
-                              WHERE receipt_date = ? AND store = ? GROUP BY receipt_id""",
-                           (receipt_date, store)).fetchall()
-    finally:
-        con.close()
-    return any(abs((s or 0) - amount) < 0.01 for (s,) in rows)
+    rows = db_rows("SELECT SUM(amount) FROM expenses WHERE receipt_date = :d AND store = :s GROUP BY receipt_id",
+                   d=receipt_date, s=store)
+    return any(abs(float(s or 0) - amount) < 0.01 for (s,) in rows)
 
 
 def save_rows(df):
-    con = get_con()
-    try:
-        df[COLUMNS].to_sql("expenses", con, if_exists="append", index=False)
-        con.commit()
-    finally:
-        con.close()
+    with get_engine().begin() as c:
+        df[COLUMNS].to_sql("expenses", c, if_exists="append", index=False)
+
+
+def save_receipt_info(receipt_id, subtotal, total):
+    db_run("""INSERT INTO receipt_info (receipt_id, subtotal, total) VALUES (:r, :s, :t)
+              ON CONFLICT (receipt_id) DO UPDATE SET subtotal = excluded.subtotal, total = excluded.total""",
+           r=receipt_id, s=subtotal, t=total)
+
+
+def receipt_info():
+    return {rid: (float(s) if s is not None else None)
+            for rid, s in db_rows("SELECT receipt_id, subtotal FROM receipt_info")}
+
+
+def delete_receipt_ids(ids):
+    lines = db_run("DELETE FROM expenses WHERE receipt_id IN :ids", ids=list(ids))
+    db_run("DELETE FROM receipt_info WHERE receipt_id IN :ids", ids=list(ids))
+    return lines
 
 
 def receipt_choices():
-    con = get_con()
+    rows = db_rows("""SELECT receipt_id, receipt_date, store, SUM(amount) FROM expenses
+                      GROUP BY receipt_id, receipt_date, store ORDER BY receipt_date DESC, receipt_id DESC""")
+    return [(f"{nice_date(d)}, {s}, ${float(t):,.2f}", rid) for rid, d, s, t in rows]
+
+
+def get_setting(key, default=None):
+    rows = db_rows("SELECT value FROM settings WHERE key = :k", k=key)
+    return rows[0][0] if rows else default
+
+
+def set_setting(key, value):
+    db_run("""INSERT INTO settings (key, value) VALUES (:k, :v)
+              ON CONFLICT (key) DO UPDATE SET value = excluded.value""", k=key, v=str(value))
+
+
+def get_budget():
     try:
-        rows = con.execute("""SELECT receipt_id, receipt_date, store, ROUND(SUM(amount), 2)
-                              FROM expenses GROUP BY receipt_id
-                              ORDER BY receipt_date DESC, receipt_id DESC""").fetchall()
-    finally:
-        con.close()
-    return [(f"{nice_date(d)}, {s}, ${t:,.2f}", rid) for rid, d, s, t in rows]
-
-
-def receipt_lines(receipt_ids):
-    if not receipt_ids:
-        return 0
-    con = get_con()
-    try:
-        marks = ",".join("?" * len(receipt_ids))
-        return con.execute(f"SELECT COUNT(*) FROM expenses WHERE receipt_id IN ({marks})",
-                           list(receipt_ids)).fetchone()[0]
-    finally:
-        con.close()
-
-
-def ask_delete(receipt_ids):
-    """First click: show a confirmation instead of deleting straight away."""
-    if not receipt_ids:
-        return gr.update(visible=False), "", "Tick at least one receipt first."
-    n = len(receipt_ids)
-    text = (f"**Delete {n} receipt{'s' if n > 1 else ''} and {receipt_lines(receipt_ids)} lines?** "
-            "This can't be undone.")
-    return gr.update(visible=True), text, ""
-
-
-def delete_receipts(receipt_ids, period=None, store=None, category=None):
-    filters = [v for v in (period, store, category) if v is not None]
-    if not receipt_ids:
-        return ("Tick at least one receipt first.", gr.update(visible=False), False, *refresh_all(*filters))
-    con = get_con()
-    try:
-        marks = ",".join("?" * len(receipt_ids))
-        lines = con.execute(f"DELETE FROM expenses WHERE receipt_id IN ({marks})", list(receipt_ids)).rowcount
-        con.commit()
-    finally:
-        con.close()
-    n = len(receipt_ids)
-    return (f"Deleted {n} receipt{'s' if n > 1 else ''} ({lines} lines).", gr.update(visible=False), False,
-            *refresh_all(*filters))
-
-
-def toggle_all(checked):
-    return gr.update(value=[rid for _, rid in receipt_choices()] if checked else [])
+        return float(get_setting("monthly_budget", 0) or 0)
+    except ValueError:
+        return 0.0
 
 
 def run_sql(query):
-    """Run a read-only query against the receipts database."""
+    """Run one read-only query for the SQL box."""
     q = (query or "").strip().rstrip(";")
     if not re.match(r"^(select|with)\b", q, re.I) or ";" in q:
         return pd.DataFrame(), "Only a single SELECT query can run here, so your data can't be changed."
-    get_con().close()                                   # make sure the database file exists
-    uri = Path(DB_PATH).resolve().as_uri() + "?mode=ro"  # read-only connection
-    con = sqlite3.connect(uri, uri=True)
+    eng = get_engine()
     try:
-        df = pd.read_sql_query(q, con)
+        if eng.kind == "postgres":
+            with eng.connect() as c:
+                with c.begin():
+                    c.exec_driver_sql("SET TRANSACTION READ ONLY")
+                    c.exec_driver_sql("SET LOCAL statement_timeout = 10000")
+                    res = c.exec_driver_sql(q.replace("%", "%%"))
+                    df = pd.DataFrame(res.fetchall(), columns=list(res.keys()))
+        else:
+            uri = Path(DB_PATH).resolve().as_uri() + "?mode=ro"
+            con = sqlite3.connect(uri, uri=True)
+            try:
+                df = pd.read_sql_query(q, con)
+            finally:
+                con.close()
     except Exception as e:
-        return pd.DataFrame(), f"The query didn't run: {e}"
-    finally:
-        con.close()
+        orig = getattr(e, "orig", e)
+        msg = orig.args[0].get("M") if orig.args and isinstance(orig.args[0], dict) else str(orig).split("\n")[0]
+        return pd.DataFrame(), f"The query didn't run: {str(msg)[:300]}"
+    df = df.apply(lambda s: s.map(lambda v: float(v) if isinstance(v, Decimal) else v))
     shown = df.head(500)
-    note = f"{len(df)} rows" + (" (showing the first 500)" if len(df) > 500 else "")
-    return shown, note
+    return shown, f"{len(df)} rows" + (" (showing the first 500)" if len(df) > 500 else "")
 
 
 # ---------------- Formatting ----------------
@@ -315,32 +398,6 @@ def style(fig, title, height=340):
         plot_bgcolor="rgba(0,0,0,0)", hoverlabel=dict(font_family=FONT),
         legend=dict(title=None, orientation="h", y=-0.12, x=0, font=dict(size=11)))
     return fig
-
-
-# ---------------- Settings (monthly budget) ----------------
-def get_setting(key, default=None):
-    con = get_con()
-    try:
-        row = con.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
-    finally:
-        con.close()
-    return row[0] if row else default
-
-
-def set_setting(key, value):
-    con = get_con()
-    try:
-        con.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, str(value)))
-        con.commit()
-    finally:
-        con.close()
-
-
-def get_budget():
-    try:
-        return float(get_setting("monthly_budget", 0) or 0)
-    except ValueError:
-        return 0.0
 
 
 # ---------------- Filters ----------------
@@ -689,6 +746,7 @@ def process_receipt(image, date_override="", store_override=""):
     df["receipt_date"], df["store"] = receipt_date, store
     df["created_at"] = dt.datetime.now().isoformat(timespec="seconds")
     save_rows(df)
+    save_receipt_info(df["receipt_id"].iloc[0], r["subtotal"], r["total"])   # for the Matched / Check chip
 
     gap = items_gap(r)
     message = (f"**Saved {n_items} items from {store}, {nice_date(receipt_date)}.** "
@@ -704,7 +762,8 @@ def process_receipt(image, date_override="", store_override=""):
                     f"subtotal is ${r['subtotal']:,.2f}, so a line worth about ${abs(gap):,.2f} "
                     f"seems to be {'missing' if gap > 0 else 'extra or misread'}.")
     message += date_note
-    return {**base, "kind": "saved", "matched": matched, "message": message}
+    return {**base, "kind": "saved", "matched": matched, "message": message,
+            "receipt_id": df["receipt_id"].iloc[0]}
 
 
 def lan_ip():
@@ -720,303 +779,165 @@ def lan_ip():
         s.close()
 
 
-def scan(image, date_override, store_override, period, store, category):
-    if image is None:
-        return (gr.update(),) * (3 + N_REFRESH)
-    res = process_receipt(image, date_override, store_override)
-    view = res["view"]
-    return (gr.update(value=view, visible=not view.empty), res["message"], res["text"],
-            *refresh_all(period, store, category))
+# ---------------- Functions the FreshAnalytics page calls ----------------
+import base64
+from urllib.parse import urlparse
+
+DEFAULT_CAT_BUDGETS = {"Produce": 40, "Dairy & Eggs": 35, "Meat & Seafood": 35,
+                       "Pantry": 25, "Bakery": 15, "Snacks": 15}
 
 
-def read_many(files, period, store, category, progress=gr.Progress()):
-    if not files:
-        return (gr.update(visible=False), "Add some receipt photos first.", *refresh_all(period, store, category))
-    rows, saved, flagged = [], 0, 0
-    for i, f in enumerate(files):
-        path = f if isinstance(f, str) else f.name
-        progress(i / len(files), desc=f"Reading receipt {i + 1} of {len(files)}")
-        try:
-            res = process_receipt(Image.open(path))
-        except Exception as e:                      # one bad file shouldn't stop the batch
-            res = {"kind": "failed", "message": str(e)}
-        if res["kind"] == "saved":
-            saved += 1
-            result = "Saved" if res["matched"] is not False else "Saved, check items"
-            flagged += res["matched"] is False
-        elif res["kind"] == "duplicate":
-            result = "Already saved"
-        else:
-            result = "Couldn't read"
-        rows.append([Path(path).name, res.get("store", ""), nice_date(res.get("date", "")),
-                     res.get("items", ""), f"${res['paid']:,.2f}" if "paid" in res else "", result])
-    summary = pd.DataFrame(rows, columns=["Photo", "Store", "Date", "Items", "Paid", "Result"])
-    note = f"**Saved {saved} of {len(files)} receipts.**"
-    if flagged:
-        note += f" {flagged} didn't match their subtotal; check them in Records."
-    return (gr.update(value=summary, visible=True), note, *refresh_all(period, store, category))
-
-
-# ---------------- QR code for phones ----------------
-def phone_link(request: gr.Request):
-    """Work out the address a phone should open, from how this page was reached."""
-    host = (request.headers.get("host") or "") if request else ""
-    if not host:
+def _clean(v):
+    """Turn pandas/numpy values into plain JSON values."""
+    if v is None:
         return None
-    if host.startswith(("127.0.0.1", "localhost", "0.0.0.0")):
+    if isinstance(v, Decimal):
+        return float(v)
+    try:
+        if pd.isna(v):
+            return None
+    except (TypeError, ValueError):
+        pass
+    return v.item() if hasattr(v, "item") else v
+
+
+def api_data():
+    """Everything the page needs: receipts with their lines, and budgets."""
+    df = load_all()
+    info = receipt_info()
+    receipts = []
+    if not df.empty:
+        for rid, g in df.groupby("receipt_id", sort=False):
+            items = g[g["category"] != "Tax"]
+            printed = info.get(rid)
+            receipts.append({
+                "id": str(rid),
+                "date": str(g["receipt_date"].iloc[0])[:10],
+                "store": g["store"].iloc[0] or "Unknown store",
+                "subtotal": round(float(printed if printed is not None else items["amount"].sum()), 2),
+                "printed": printed is not None,
+                "tax": round(float(g.loc[g["category"] == "Tax", "amount"].sum()), 2),
+                "items": [{"name": r.item, "qty": _clean(r.qty) or 1, "unit": r.unit or "ea",
+                           "unit_price": _clean(r.unit_price), "amount": round(float(r.amount), 2),
+                           "category": r.category or "Other"} for r in items.itertuples()],
+            })
+        receipts.sort(key=lambda r: (r["date"], r["id"]))
+    try:
+        cats = json.loads(get_setting("cat_budgets") or "null") or DEFAULT_CAT_BUDGETS
+    except ValueError:
+        cats = DEFAULT_CAT_BUDGETS
+    return {"receipts": receipts, "budget": get_budget(), "cat_budgets": cats, "storage": storage_kind()}
+
+
+def api_scan(path, date_override="", store_override=""):
+    """Read one uploaded receipt photo and save it."""
+    try:
+        res = process_receipt(Image.open(path), date_override or "", store_override or "")
+    except Exception as e:                       # includes demo mode's "scanning is switched off"
+        return {"kind": "error", "message": str(e)}
+    view = res.get("view")
+    lines = [] if view is None or view.empty else [
+        {"name": r["Item"], "qty": _clean(r["Qty"]), "unit": r["Unit"], "amount": _clean(r["Amount"]),
+         "category": r["Category"]} for r in view.to_dict("records")]
+    return {"kind": res.get("kind"), "message": res.get("message", ""), "store": res.get("store"),
+            "date": res.get("date"), "paid": _clean(res.get("paid")), "matched": res.get("matched"),
+            "items": _clean(res.get("items")), "lines": lines, "text": res.get("text", "")}
+
+
+def api_delete(ids):
+    ids = [str(i) for i in (ids or [])]
+    if not ids:
+        return {"deleted": 0, "lines": 0}
+    lines = delete_receipt_ids(ids)
+    return {"deleted": len(ids), "lines": lines}
+
+
+def api_sql(query):
+    df, note = run_sql(query)
+    rows = [[_clean(v) for v in row] for row in df.itertuples(index=False)] if not df.empty else []
+    return {"columns": [str(c) for c in df.columns], "rows": rows, "note": note}
+
+
+def api_export():
+    path = export_excel()
+    with open(path, "rb") as f:
+        data = base64.b64encode(f.read()).decode()
+    return {"name": "freshanalytics_receipts.xlsx", "b64": data}
+
+
+def api_save_budgets(budget, cat_budgets):
+    set_setting("monthly_budget", max(float(budget or 0), 0))
+    clean = {str(k): max(float(v or 0), 0) for k, v in (cat_budgets or {}).items()}
+    set_setting("cat_budgets", json.dumps(clean))
+    return True
+
+
+def api_phone_url(origin):
+    """The address a phone should open: the public link, or this laptop's Wi-Fi address."""
+    u = urlparse(origin or "")
+    if u.hostname in ("localhost", "127.0.0.1", "0.0.0.0"):
         ip = lan_ip()
-        port = host.split(":")[1] if ":" in host else "7860"
-        return f"http://{ip}:{port}" if ip else None
-    proto = request.headers.get("x-forwarded-proto") or ("https" if "gradio.live" in host else "http")
-    return f"{proto}://{host}"
+        return f"http://{ip}:{u.port or 7860}" if ip else origin
+    return origin
 
 
-def phone_qr(request: gr.Request):
-    url = phone_link(request)
-    if not url:
-        return gr.update(visible=False), ""
-    import io
-    import qrcode
-    buf = io.BytesIO()
-    qrcode.make(url, border=2, box_size=8).save(buf, format="PNG")
-    buf.seek(0)
-    return gr.update(value=Image.open(buf), visible=True), f'<p class="qrurl">{url}</p>'
+# ---------------- FreshAnalytics page ----------------
+# The look lives in web/page.html and web/page.js; Gradio supplies the login, the share link,
+# and runs the Python functions above when the page calls them (server.api_data(), ...).
+WEB = Path(__file__).resolve().parent / "web"
+PAGE_HTML = (WEB / "page.html").read_text(encoding="utf-8")
+PAGE_JS = (WEB / "page.js").read_text(encoding="utf-8")
+HEAD = ('<link rel="preconnect" href="https://fonts.googleapis.com">'
+        '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
+        '<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">'
+        '<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>')
 
-
-# ---------------- Look and feel ----------------
+# Used for Gradio's own login screen
 THEME = gr.themes.Base(
-    font=[gr.themes.GoogleFont("Instrument Sans"), "system-ui", "sans-serif"],
-    radius_size="md",
+    font=[gr.themes.GoogleFont("Figtree"), "system-ui", "sans-serif"], radius_size="md",
 ).set(
-    body_background_fill=BG, body_background_fill_dark=BG,
-    body_text_color=INK, body_text_color_dark=INK,
-    body_text_color_subdued=MUTED, body_text_color_subdued_dark=MUTED,
-    block_background_fill="#FFFFFF", block_background_fill_dark="#FFFFFF",
-    block_border_color=LINE, block_border_color_dark=LINE,
-    border_color_primary=LINE, border_color_primary_dark=LINE,
-    block_shadow="none", block_shadow_dark="none",
-    block_label_text_color=MUTED, block_label_text_color_dark=MUTED,
-    block_title_text_color=INK, block_title_text_color_dark=INK,
-    input_background_fill="#FFFFFF", input_background_fill_dark="#FFFFFF",
-    button_primary_background_fill=ACCENT, button_primary_background_fill_dark=ACCENT,
-    button_primary_background_fill_hover="#24563F", button_primary_background_fill_hover_dark="#24563F",
-    button_primary_text_color="#FFFFFF", button_primary_text_color_dark="#FFFFFF",
-    button_secondary_background_fill="#FFFFFF", button_secondary_background_fill_dark="#FFFFFF",
-    button_secondary_text_color=INK, button_secondary_text_color_dark=INK,
-    color_accent=ACCENT, color_accent_soft="#E5EFE9", color_accent_soft_dark="#E5EFE9",
-    background_fill_primary="#FFFFFF", background_fill_primary_dark="#FFFFFF",
-    background_fill_secondary=BG, background_fill_secondary_dark=BG,
+    body_background_fill="#F3F5F2", body_background_fill_dark="#121614",
+    button_primary_background_fill="#2F7A3B", button_primary_background_fill_dark="#4E9B58",
+    button_primary_background_fill_hover="#28692F", button_primary_background_fill_hover_dark="#5BAA66",
+    button_primary_text_color="#FFFFFF", button_primary_text_color_dark="#0E130F",
+    color_accent="#2F7A3B",
 )
 
-CSS = f"""
-.gradio-container {{ max-width: 1120px !important; margin: 0 auto !important; }}
-#shell {{ gap: 24px !important; align-items: flex-start !important; flex-wrap: wrap !important; }}
-#side {{ background: #fff; border: 1px solid {LINE}; border-radius: 16px; padding: 16px 12px !important;
-         position: sticky; top: 12px; }}
-#content {{ min-width: 320px !important; }}
-#brand {{ display: flex; align-items: center; gap: 10px; margin: 2px 4px 14px; }}
-#brand .mark {{ width: 32px; height: 32px; border-radius: 9px; background: {ACCENT}; color: #fff;
-                display: grid; place-items: center; }}
-#brand .mark svg {{ width: 20px; height: 20px; }}
-#brand span:last-child {{ font-size: 19px; font-weight: 700; letter-spacing: -0.01em; color: {INK}; }}
-.nav button {{ justify-content: flex-start !important; text-align: left !important; border: none !important;
-               box-shadow: none !important; font-weight: 500 !important; padding: 10px 12px !important; }}
-.nav button.secondary {{ background: transparent !important; color: {MUTED} !important; }}
-.nav button.secondary:hover {{ background: {BG} !important; color: {INK} !important; }}
-.nav button.primary {{ background: {ACCENT} !important; color: #fff !important; }}
-.welcome {{ display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap;
-            background: #fff; border: 1px solid {LINE}; border-radius: 16px; padding: 18px 20px; }}
-.welcome h1 {{ margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: {INK}; }}
-.welcome p {{ margin: 4px 0 0; color: {MUTED}; }}
-.produce {{ display: flex; gap: 8px; flex-wrap: wrap; }}
-.produce span {{ width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; }}
-.produce svg {{ width: 21px; height: 21px; }}
-table.mini {{ width: 100%; border-collapse: collapse; font-size: 14px; }}
-table.mini th {{ text-align: left; font-weight: 600; color: {ACCENT}; background: #E7F2E3; padding: 8px 10px; }}
-table.mini td {{ padding: 9px 10px; border-bottom: 1px solid {LINE}; font-variant-numeric: tabular-nums; }}
-table.mini .r {{ text-align: right; }}
-.ins {{ display: flex; gap: 12px; align-items: flex-start; padding: 7px 0; }}
-.ins .ic {{ width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; flex: none; }}
-.ins .ic svg {{ width: 18px; height: 18px; }}
-.ins b {{ display: block; font-weight: 600; color: {INK}; }}
-.ins span {{ color: {MUTED}; font-size: 14px; }}
-.side-label {{ color: {MUTED}; font-size: 13px; margin: 14px 0 2px; }}
-.qrurl {{ font-size: 12px; color: {MUTED}; word-break: break-all; margin: 4px 0 0; }}
-.page-title h1 {{ font-size: 28px; font-weight: 650; letter-spacing: -0.02em; margin: 6px 0 2px; color: {INK}; }}
-.page-title p {{ color: {MUTED}; margin: 0 0 8px; font-size: 15px; }}
-.stats {{ display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }}
-.stats > div {{ background: #fff; border: 1px solid {LINE}; border-radius: 14px; padding: 14px 16px; }}
-.stats .label {{ display: block; color: {MUTED}; font-size: 13px; }}
-.stats .value {{ display: block; margin: 2px 0; font-size: 24px; font-weight: 650; letter-spacing: -0.01em;
-                 color: {INK}; font-variant-numeric: tabular-nums; }}
-.stats .sub {{ display: block; color: {MUTED}; font-size: 13px; }}
-.good {{ color: {ACCENT}; }} .warn {{ color: #B7791F; }} .bad {{ color: #C2453D; }}
-.cats {{ background: #fff; border: 1px solid {LINE}; border-radius: 14px; padding: 14px 16px; }}
-.cats h3 {{ font-size: 15px; font-weight: 600; margin: 0 0 10px; color: {INK}; }}
-.catrow {{ display: grid; grid-template-columns: 26px 130px minmax(0, 1fr) 76px 40px; align-items: center;
-           gap: 8px; padding: 5px 0; font-size: 14px; color: {INK}; }}
-.caticon svg {{ width: 20px; height: 20px; display: block; }}
-.track {{ height: 9px; border-radius: 5px; background: {BG}; overflow: hidden; }}
-.fill {{ display: block; height: 9px; border-radius: 5px; }}
-.catamt {{ text-align: right; font-variant-numeric: tabular-nums; }}
-.catpct {{ text-align: right; color: {MUTED}; font-size: 13px; font-variant-numeric: tabular-nums; }}
-.empty {{ padding: 40px 24px; text-align: center; color: {MUTED}; background: #fff;
-          border: 1px dashed #CDD3CF; border-radius: 14px; line-height: 1.6; }}
-.empty strong {{ color: {INK}; }}
-.hint {{ color: {MUTED}; font-size: 14px; }}
-table td, table th {{ font-variant-numeric: tabular-nums; }}
-@media (max-width: 720px) {{
-  .stats {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
-  .stats .value {{ font-size: 20px; }}
-  .catrow {{ grid-template-columns: 24px 96px minmax(0, 1fr) 68px; }}
-  .catpct {{ display: none; }}
-}}
+# Hide Gradio's frame so the page fills the window edge to edge
+CSS = """
+.gradio-container { max-width: 100% !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
+.gradio-container > .main, .gradio-container .wrap, .gradio-container .contain { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
+.gradio-container .column, .gradio-container .block, .gradio-container .form { gap: 0 !important; border: none !important; box-shadow: none !important; background: transparent !important; }
+#fa-page { padding: 0 !important; }
+footer { display: none !important; }
 """
 
-SQL_EXAMPLE = """SELECT category, ROUND(SUM(amount), 2) AS spent
-FROM expenses
-GROUP BY category
-ORDER BY spent DESC"""
-
-PAGES = [("Overview", ""),
-         ("Scan", "Snap a receipt and your spending updates itself."),
-         ("Upload several", "Add a handful of receipt photos at once. Each takes about half a minute."),
-         ("Spend Analytics", "Where your grocery money goes, and how it changes."),
-         ("Reports", "Every line from every receipt, plus export, delete and SQL.")]
+# Gradio hands each page call to Python as ONE value: nothing ([]), the single argument,
+# or a list when the page passes several. These adapters unpack that for the functions above.
+def _page_fn(name, call):
+    call.__name__ = name                    # the page calls server.<name>(...)
+    return call
 
 
-def title_html(i):
-    name, sub = PAGES[i]
-    return "" if i == 0 else f'<div class="page-title"><h1>{name}</h1><p>{sub}</p></div>'
+PAGE_FUNCTIONS = [
+    _page_fn("api_data", lambda _=None: api_data()),
+    _page_fn("api_scan", lambda args: api_scan(*(list(args) + ["", ""])[:3])),
+    _page_fn("api_delete", lambda ids: api_delete(ids)),
+    _page_fn("api_sql", lambda query: api_sql(query)),
+    _page_fn("api_export", lambda _=None: api_export()),
+    _page_fn("api_save_budgets", lambda args: api_save_budgets(*args)),
+    _page_fn("api_phone_url", lambda origin: api_phone_url(origin)),
+]
+
+with gr.Blocks(title="FreshAnalytics", fill_width=True) as demo:
+    gr.HTML(PAGE_HTML, js_on_load=PAGE_JS, head=HEAD, elem_id="fa-page",
+            container=False, padding=False, apply_default_css=False,
+            server_functions=PAGE_FUNCTIONS)
 
 
-# ---------------- Layout ----------------
-with gr.Blocks(title="Groceries") as demo:
-    with gr.Row(equal_height=False, elem_id="shell"):
-        # Left column: sits beside the pages, so it never covers them
-        with gr.Column(scale=0, min_width=240, elem_id="side"):
-            gr.HTML(f'<div id="brand"><span class="mark">{ICONS["_logo"]}</span><span>Groceries</span></div>')
-            nav_btns = [gr.Button(name, variant="primary" if i == 0 else "secondary", size="md",
-                                  elem_classes="nav") for i, (name, _) in enumerate(PAGES)]
-            gr.HTML('<p class="side-label">Filters</p>')
-            f_period = gr.Dropdown(PERIODS, value=PERIODS[0], label="Period")
-            f_store = gr.Dropdown([ALL_STORES], value=ALL_STORES, label="Store")
-            f_cat = gr.Dropdown([ALL_CATS] + CATEGORIES + ["Tax"], value=ALL_CATS, label="Category")
-            gr.HTML('<p class="side-label">Open on your phone</p>')
-            qr_img = gr.Image(show_label=False, interactive=False, height=170, visible=False,
-                              buttons=[], container=False)
-            qr_url = gr.HTML()
-
-        with gr.Column(scale=1, elem_id="content"):
-            page_title = gr.HTML(title_html(0))
-
-            with gr.Column(visible=True) as page_home:
-                gr.HTML(welcome_html())
-                ov_kpi = gr.HTML()
-                with gr.Row(equal_height=False):
-                    with gr.Column(scale=1):
-                        ov_bars = gr.HTML()
-                    with gr.Column(scale=1):
-                        ov_ins = gr.HTML()
-                ov_recent = gr.HTML()
-
-            with gr.Column(visible=False) as page_scan:
-                with gr.Row(equal_height=False):
-                    with gr.Column(scale=5):
-                        image = gr.Image(type="pil", sources=["upload", "webcam"], height=440, label="Receipt photo")
-                        with gr.Accordion("Date or store wrong? Set them here", open=False):
-                            date_in = gr.Textbox(label="Date", placeholder="YYYY-MM-DD, leave blank to read it")
-                            store_in = gr.Textbox(label="Store", placeholder="Leave blank to read it")
-                    with gr.Column(scale=6):
-                        status = gr.Markdown("Take a photo or drop one in. The receipt is read and saved automatically.")
-                        items = gr.Dataframe(label="Items", interactive=False, wrap=True, visible=False)
-                        with gr.Accordion("What the model read", open=False):
-                            raw_text = gr.Textbox(lines=14, show_label=False)
-
-            with gr.Column(visible=False) as page_bulk:
-                files = gr.File(file_count="multiple", file_types=["image"], label="Receipt photos", height=200)
-                read_btn = gr.Button("Read all receipts", variant="primary")
-                batch_note = gr.Markdown()
-                batch_table = gr.Dataframe(interactive=False, wrap=True, label="Results", visible=False)
-
-            with gr.Column(visible=False) as page_spend:
-                kpi = gr.HTML()
-                with gr.Row(equal_height=False):
-                    with gr.Column(scale=1):
-                        bars = gr.HTML()
-                    with gr.Column(scale=1):
-                        top = gr.Plot(show_label=False)
-                trend = gr.Plot(show_label=False)
-                with gr.Accordion("Monthly budget", open=False):
-                    with gr.Row():
-                        budget_in = gr.Number(label="Budget per month ($)", value=get_budget, minimum=0)
-                        budget_btn = gr.Button("Save budget", scale=0, min_width=140)
-                gr.HTML('<div class="page-title"><h1 style="font-size:20px">Look closer</h1>'
-                        '<p>Pick a category, then an item, to see every purchase and how its price changed.</p></div>')
-                with gr.Row():
-                    d_cat = gr.Dropdown(label="Category", choices=[], value=None)
-                    d_item = gr.Dropdown(label="Item", choices=[], value=None)
-                d_items = gr.Dataframe(label="Items in this category", interactive=False, wrap=True, visible=False)
-                d_note = gr.Markdown()
-                d_price = gr.Plot(show_label=False, visible=False)
-                d_buys = gr.Dataframe(label="Every purchase", interactive=False, wrap=True, visible=False)
-
-            with gr.Column(visible=False) as page_records:
-                records = gr.Dataframe(label="Every item you've scanned (follows the filters)",
-                                       interactive=False, wrap=True, max_height=420, show_search="search")
-                with gr.Row():
-                    export_btn = gr.Button("Download as Excel")
-                    file_out = gr.File(label="Excel file", height=80)
-                with gr.Accordion("Delete receipts", open=False):
-                    sel_all = gr.Checkbox(label="Select all", value=False)
-                    del_pick = gr.CheckboxGroup(label="Receipts", choices=[])
-                    del_btn = gr.Button("Delete selected", variant="stop")
-                    with gr.Row(visible=False) as confirm_row:
-                        confirm_text = gr.Markdown()
-                        yes_btn = gr.Button("Yes, delete", variant="stop", scale=0, min_width=120)
-                        no_btn = gr.Button("Cancel", scale=0, min_width=100)
-                    del_note = gr.Markdown()
-                with gr.Accordion("Query with SQL", open=False):
-                    gr.Markdown("Everything lives in one table called `expenses`, with columns receipt_id, "
-                                "receipt_date, store, item, qty, unit, unit_price, amount, department, "
-                                "category and created_at. Queries are read-only.", elem_classes="hint")
-                    sql_in = gr.Code(value=SQL_EXAMPLE, language="sql", label="Query", lines=5)
-                    sql_btn = gr.Button("Run query", variant="primary")
-                    sql_note = gr.Markdown()
-                    sql_out = gr.Dataframe(interactive=False, wrap=True, label="Result")
-
-    # ----- wiring -----
-    pages = [page_home, page_scan, page_bulk, page_spend, page_records]
-    filters = [f_period, f_store, f_cat]
-    refresh_outputs = [ov_kpi, ov_bars, ov_recent, ov_ins,
-                       kpi, bars, trend, top, d_cat, d_item, d_items, d_price, d_buys, d_note,
-                       records, del_pick, f_store]
-
-    def go_to(i):
-        return ([title_html(i)] + [gr.update(visible=j == i) for j in range(len(pages))]
-                + [gr.update(variant="primary" if j == i else "secondary") for j in range(len(pages))])
-
-    for i, b in enumerate(nav_btns):
-        b.click(lambda i=i: go_to(i), None, [page_title, *pages, *nav_btns])
-
-    for f in filters:
-        f.change(refresh_all, filters, refresh_outputs)
-
-    image.change(scan, [image, date_in, store_in, *filters], [items, status, raw_text, *refresh_outputs])
-    read_btn.click(read_many, [files, *filters], [batch_table, batch_note, *refresh_outputs])
-    budget_btn.click(save_budget, [budget_in, *filters], kpi)
-    d_cat.change(drill_category, [d_cat, f_period, f_store], [d_items, d_item, d_price, d_buys, d_note])
-    d_item.change(drill_item, [d_item, f_period, f_store], [d_buys, d_price, d_note])
-    sel_all.input(toggle_all, sel_all, del_pick)
-    del_btn.click(ask_delete, del_pick, [confirm_row, confirm_text, del_note])
-    yes_btn.click(delete_receipts, [del_pick, *filters], [del_note, confirm_row, sel_all, *refresh_outputs])
-    no_btn.click(lambda: gr.update(visible=False), None, confirm_row)
-    sql_btn.click(run_sql, sql_in, [sql_out, sql_note])
-    export_btn.click(export_excel, None, file_out)
-    demo.load(refresh_all, filters, refresh_outputs)
-    demo.load(phone_qr, None, [qr_img, qr_url])
-
-N_REFRESH = len(refresh_outputs)
+def launch_options():
+    """Shared by app.py and demo_app.py."""
+    return dict(theme=THEME, css=CSS, footer_links=[])
 
 
 def print_qr(url):
@@ -1051,4 +972,4 @@ if __name__ == "__main__":
 
     demo.launch(server_name="0.0.0.0", share=SHARE, show_error=True,
                 auth=("receipts", PASSWORD) if PASSWORD else None,
-                theme=THEME, css=CSS, footer_links=[])
+                **launch_options())

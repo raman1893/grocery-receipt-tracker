@@ -6,3 +6,5 @@ plotly
 openpyxl
 Pillow
 qrcode
+sqlalchemy
+pg8000

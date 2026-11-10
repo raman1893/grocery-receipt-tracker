@@ -1,10 +1,14 @@
-"""Try the grocery app with sample receipts: no AI model, no GPU, no Colab.
+"""Try FreshAnalytics with sample receipts: no AI model, no GPU, no Colab.
 
 Run:   py demo_app.py      then open http://127.0.0.1:7860      (Ctrl+C to stop)
 
 app.py is not changed. This file borrows its screens and logic, uses its own
 database (demo.db) so real records are never touched, and switches scanning off.
 """
+import os
+for _key in ("DATABASE_URL", "POSTGRES_URL", "NEON_DATABASE_URL"):
+    os.environ[_key] = ""          # the demo never touches your real (Neon) database
+
 import gradio as gr
 import app
 from demo_data import DEMO_RECEIPTS
@@ -29,4 +33,4 @@ print("\n" + "=" * 55)
 print("  DEMO: sample receipts, no model loaded")
 print("  Open on this laptop:  http://127.0.0.1:7860")
 print("=" * 55 + "\n")
-app.demo.launch(theme=app.THEME, css=app.CSS, footer_links=[])
+app.demo.launch(**app.launch_options())
