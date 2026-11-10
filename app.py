@@ -14,6 +14,7 @@ import plotly.graph_objects as go
 from PIL import Image, ImageOps
 
 from receipt_parser import rule_category, find_store, CATEGORIES, DEPARTMENTS
+from icons import ICONS
 
 # ---------------- Config ----------------
 # GROCERY_DB lets the Colab notebook point this at Google Drive.
@@ -188,6 +189,7 @@ def get_con():
         id INTEGER PRIMARY KEY AUTOINCREMENT, receipt_id TEXT, receipt_date TEXT,
         store TEXT, item TEXT, qty REAL, unit TEXT, unit_price REAL, amount REAL,
         department TEXT, category TEXT, created_at TEXT)""")
+    con.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")
     existing = {row[1] for row in con.execute("PRAGMA table_info(expenses)")}
     for col in ("unit", "unit_price", "department"):            # upgrade older databases
         if col not in existing:
@@ -257,9 +259,10 @@ def ask_delete(receipt_ids):
     return gr.update(visible=True), text, ""
 
 
-def delete_receipts(receipt_ids):
+def delete_receipts(receipt_ids, period=None, store=None, category=None):
+    filters = [v for v in (period, store, category) if v is not None]
     if not receipt_ids:
-        return ("Tick at least one receipt first.", gr.update(visible=False), False, *refresh_all())
+        return ("Tick at least one receipt first.", gr.update(visible=False), False, *refresh_all(*filters))
     con = get_con()
     try:
         marks = ",".join("?" * len(receipt_ids))
@@ -269,7 +272,7 @@ def delete_receipts(receipt_ids):
         con.close()
     n = len(receipt_ids)
     return (f"Deleted {n} receipt{'s' if n > 1 else ''} ({lines} lines).", gr.update(visible=False), False,
-            *refresh_all())
+            *refresh_all(*filters))
 
 
 def toggle_all(checked):
@@ -314,79 +317,321 @@ def style(fig, title, height=340):
     return fig
 
 
-# ---------------- Analytics ----------------
-def dashboard():
+# ---------------- Settings (monthly budget) ----------------
+def get_setting(key, default=None):
+    con = get_con()
+    try:
+        row = con.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+    finally:
+        con.close()
+    return row[0] if row else default
+
+
+def set_setting(key, value):
+    con = get_con()
+    try:
+        con.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, str(value)))
+        con.commit()
+    finally:
+        con.close()
+
+
+def get_budget():
+    try:
+        return float(get_setting("monthly_budget", 0) or 0)
+    except ValueError:
+        return 0.0
+
+
+# ---------------- Filters ----------------
+PERIODS = ["All time", "This month", "Last month", "Last 3 months", "This year"]
+ALL_STORES, ALL_CATS = "All stores", "All categories"
+
+
+def prepared():
     df = load_all()
+    if not df.empty:
+        df["receipt_date"] = pd.to_datetime(df["receipt_date"], errors="coerce")
+    return df
+
+
+def filter_df(df, period=PERIODS[0], store=ALL_STORES, category=ALL_CATS):
     if df.empty:
-        empty = ('<div class="empty"><strong>No receipts yet.</strong><br>'
-                 'Scan your first one on the Scan tab and your spending shows up here.</div>')
-        return empty, None, None, None
+        return df
+    today = pd.Timestamp(dt.date.today())
+    month_start = today.replace(day=1)
+    start = end = None
+    if period == "This month":
+        start = month_start
+    elif period == "Last month":
+        start, end = month_start - pd.DateOffset(months=1), month_start
+    elif period == "Last 3 months":
+        start = month_start - pd.DateOffset(months=2)
+    elif period == "This year":
+        start = today.replace(month=1, day=1)
+    if start is not None:
+        df = df[df["receipt_date"] >= start]
+    if end is not None:
+        df = df[df["receipt_date"] < end]
+    if store and store != ALL_STORES:
+        df = df[df["store"] == store]
+    if category and category != ALL_CATS:
+        df = df[df["category"] == category]
+    return df
 
-    df["receipt_date"] = pd.to_datetime(df["receipt_date"], errors="coerce")
+
+def store_choices():
+    df = load_all()
+    return [ALL_STORES] + (sorted(df["store"].dropna().unique()) if not df.empty else [])
+
+
+# ---------------- Spending page ----------------
+EMPTY = ('<div class="empty"><strong>Nothing here yet.</strong><br>'
+         'Scan a receipt, or change the filters in the sidebar.</div>')
+
+
+def kpi_cards(period, store):
+    df = filter_df(prepared(), PERIODS[0], store)
+    today = dt.date.today()
+    this_m = pd.Timestamp(today).to_period("M")
+    if df.empty:
+        return EMPTY
     df["period"] = df["receipt_date"].dt.to_period("M")
-    total = df["amount"].sum()
-    receipts = df["receipt_id"].nunique()
-    latest = df["period"].max()
-    latest_spend = df.loc[df["period"] == latest, "amount"].sum()
-    stats = [("Total spent", f"${total:,.2f}"), ("Receipts", f"{receipts}"),
-             ("Average receipt", f"${total / receipts:,.2f}"),
-             (latest.strftime("%B %Y"), f"${latest_spend:,.2f}")]
-    kpi = '<div class="stats">' + "".join(
-        f'<div><span class="label">{k}</span><span class="value">{v}</span></div>'
-        for k, v in stats) + "</div>"
+    spent_now = df.loc[df["period"] == this_m, "amount"].sum()
+    spent_last = df.loc[df["period"] == this_m - 1, "amount"].sum()
+    budget = get_budget()
 
-    by_cat = df.groupby("category", as_index=False)["amount"].sum().sort_values("amount", ascending=False)
-    pie = px.pie(by_cat, names="category", values="amount", hole=0.64,
-                 color="category", color_discrete_map=CAT_COLORS)
-    pie.update_traces(textinfo="percent", textposition="inside", sort=False,
-                      hovertemplate="%{label}<br>$%{value:,.2f}<extra></extra>",
-                      marker=dict(line=dict(color="#FFFFFF", width=2)))
-    pie.add_annotation(text=f"${total:,.0f}", showarrow=False, font=dict(size=22, color=INK))
-    style(pie, "Where it goes")
+    if budget:
+        pct = spent_now / budget
+        tone = "good" if pct < 0.8 else ("warn" if pct <= 1 else "bad")
+        sub1 = f'<span class="{tone}">{pct:.0%} of your ${budget:,.0f} budget</span>'
+    elif spent_last:
+        sub1 = f"vs ${spent_last:,.2f} last month"
+    else:
+        sub1 = "set a budget below"
 
+    days_in_month = (pd.Timestamp(today) + pd.offsets.MonthEnd(0)).day
+    if spent_now and today.day >= 3:
+        projected = f"${spent_now / today.day * days_in_month:,.0f}"
+        sub2 = "at your current pace"
+    else:
+        projected, sub2 = "—", "needs a few days of receipts"
+
+    period_df = filter_df(df, period, store)
+    trips = period_df["receipt_id"].nunique()
+    avg_trip = period_df.groupby("receipt_id")["amount"].sum().mean() if trips else 0
+    dates = sorted(period_df.drop_duplicates("receipt_id")["receipt_date"].dropna())
+    if len(dates) >= 2:
+        gap = (dates[-1] - dates[0]).days / (len(dates) - 1)
+        sub3 = f"about every {gap:.0f} days"
+    else:
+        sub3 = "per receipt"
+
+    cards = [(today.strftime("%B"), f"${spent_now:,.2f}", sub1),
+             (f"Projected {today.strftime('%B')}", projected, sub2),
+             ("Average trip", f"${avg_trip:,.2f}", sub3),
+             ("Trips", f"{trips}", period.lower())]
+    return '<div class="stats">' + "".join(
+        f'<div><span class="label">{k}</span><span class="value">{v}</span><span class="sub">{s}</span></div>'
+        for k, v, s in cards) + "</div>"
+
+
+def category_bars(df):
+    if df.empty:
+        return EMPTY
+    by = df.groupby("category")["amount"].sum().sort_values(ascending=False)
+    total, top = by.sum(), by.max()
+    rows = []
+    for cat, amt in by.items():
+        color = CAT_COLORS.get(cat, "#B8BDB9")
+        rows.append(
+            f'<div class="catrow"><span class="caticon" style="color:{color}">{ICONS.get(cat, ICONS["Other"])}</span>'
+            f'<span class="catname">{cat}</span>'
+            f'<span class="track"><span class="fill" style="width:{amt / top * 100:.1f}%;background:{color}"></span></span>'
+            f'<span class="catamt">${amt:,.2f}</span><span class="catpct">{amt / total:.0%}</span></div>')
+    return '<div class="cats"><h3>Where it goes</h3>' + "".join(rows) + "</div>"
+
+
+def monthly_chart(df):
+    if df.empty:
+        return None
+    df = df.assign(period=df["receipt_date"].dt.to_period("M"))
     monthly = df.groupby(["period", "category"], as_index=False)["amount"].sum().sort_values("period")
     monthly["month"] = monthly["period"].dt.strftime("%b %Y")
-    trend = px.bar(monthly, x="month", y="amount", color="category",
-                   color_discrete_map=CAT_COLORS, labels={"amount": "", "month": ""})
-    trend.update_xaxes(type="category")
-    trend.update_yaxes(tickprefix="$", gridcolor=LINE, showgrid=True)
-    trend.update_layout(bargap=0.55)
-    trend.update_traces(hovertemplate="%{x}<br>$%{y:,.2f}<extra></extra>")
+    fig = px.bar(monthly, x="month", y="amount", color="category",
+                 color_discrete_map=CAT_COLORS, labels={"amount": "", "month": ""})
+    fig.update_xaxes(type="category")
+    fig.update_yaxes(tickprefix="$", gridcolor=LINE, showgrid=True)
+    fig.update_layout(bargap=0.55)
+    fig.update_traces(hovertemplate="%{x}<br>$%{y:,.2f}<extra></extra>")
     totals = monthly.groupby(["period", "month"], as_index=False)["amount"].sum().sort_values("period")
-    trend.add_trace(go.Scatter(                       # total label above each month's bar
-        x=totals["month"], y=totals["amount"], mode="text", showlegend=False, hoverinfo="skip",
-        text=[f"${t:,.2f}" for t in totals["amount"]], textposition="top center",
-        textfont=dict(size=13, color=INK)))
-    trend.update_yaxes(range=[0, totals["amount"].max() * 1.15])
-    style(trend, "Month by month", height=360)
+    fig.add_trace(go.Scatter(x=totals["month"], y=totals["amount"], mode="text", showlegend=False,
+                             hoverinfo="skip", text=[f"${t:,.2f}" for t in totals["amount"]],
+                             textposition="top center", textfont=dict(size=13, color=INK)))
+    fig.update_yaxes(range=[0, totals["amount"].max() * 1.15])
+    return style(fig, "Month by month", height=360)
 
-    items = df[df["category"] != "Tax"]
+
+def top_items_chart(df):
+    items = df[df["category"] != "Tax"] if not df.empty else df
+    if items.empty:
+        return None
     top = (items.groupby(["item", "category"], as_index=False)["amount"].sum()
                 .nlargest(10, "amount").sort_values("amount"))
-    top_fig = go.Figure(go.Bar(
+    fig = go.Figure(go.Bar(
         x=top["amount"], y=top["item"], orientation="h",
         marker_color=[CAT_COLORS.get(c, "#B8BDB9") for c in top["category"]],
         text=[f"${a:,.2f}" for a in top["amount"]], textposition="outside", cliponaxis=False,
         hovertemplate="%{y}<br>$%{x:,.2f}<extra></extra>"))
-    top_fig.update_xaxes(visible=False)
-    top_fig.update_yaxes(ticks="", showline=False)
-    style(top_fig, "Most spent on")
-    top_fig.update_layout(margin=dict(l=8, r=48, t=48, b=8))
-    return kpi, pie, trend, top_fig
+    fig.update_xaxes(visible=False)
+    fig.update_yaxes(ticks="", showline=False)
+    style(fig, "Most spent on")
+    fig.update_layout(margin=dict(l=8, r=56, t=48, b=8))
+    return fig
 
 
-def records_table():
-    df = load_all()
+def spending_view(period, store, category):
+    df = filter_df(prepared(), period, store, category)
+    cats = sorted(df["category"].unique()) if not df.empty else []
+    return (kpi_cards(period, store), category_bars(df), monthly_chart(df), top_items_chart(df),
+            gr.update(choices=cats, value=None), gr.update(choices=[], value=None),
+            gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), "")
+
+
+# ---------------- Drill-down: category → item → purchases ----------------
+def drill_category(cat, period, store):
+    df = filter_df(prepared(), period, store)
+    df = df[df["category"] == cat] if cat and not df.empty else df.iloc[0:0]
     if df.empty:
-        return pd.DataFrame(columns=["Date", "Store", "Item", "Qty", "Unit", "Unit price", "Amount", "Category"])
+        return gr.update(visible=False), gr.update(choices=[], value=None), gr.update(visible=False), \
+               gr.update(visible=False), ""
+    g = df.groupby("item").agg(times=("receipt_id", "nunique"), qty=("qty", "sum"),
+                               spent=("amount", "sum"), avg_price=("unit_price", "mean")).reset_index()
+    last = df.sort_values("receipt_date").groupby("item")["unit_price"].last()
+    g["last_price"] = g["item"].map(last)
+    g = g.sort_values("spent", ascending=False)
+    table = pd.DataFrame({"Item": g["item"], "Times bought": g["times"], "Quantity": g["qty"].round(3),
+                          "Spent": g["spent"].map(lambda v: f"${v:,.2f}"),
+                          "Average price": g["avg_price"].map(lambda v: f"${v:,.2f}" if pd.notna(v) else ""),
+                          "Last price": g["last_price"].map(lambda v: f"${v:,.2f}" if pd.notna(v) else "")})
+    return (gr.update(value=table, visible=True), gr.update(choices=list(g["item"]), value=None),
+            gr.update(visible=False), gr.update(visible=False), "")
+
+
+def drill_item(item, period, store):
+    df = filter_df(prepared(), period, store)
+    df = df[df["item"] == item].sort_values("receipt_date") if item and not df.empty else df.iloc[0:0]
+    if df.empty:
+        return gr.update(visible=False), gr.update(visible=False), ""
+    table = pd.DataFrame({"Date": df["receipt_date"].dt.strftime("%d %b %Y"), "Store": df["store"],
+                          "Qty": df["qty"], "Unit": df["unit"],
+                          "Unit price": df["unit_price"].map(lambda v: f"${v:,.2f}" if pd.notna(v) else ""),
+                          "Paid": df["amount"].map(lambda v: f"${v:,.2f}")})
+    fig = go.Figure(go.Scatter(x=df["receipt_date"], y=df["unit_price"], mode="lines+markers+text",
+                               text=[f"${p:,.2f}" for p in df["unit_price"]], textposition="top center",
+                               line=dict(color=ACCENT, width=2), marker=dict(size=8, color=ACCENT),
+                               hovertemplate="%{x|%d %b %Y}<br>$%{y:,.2f}<extra></extra>"))
+    fig.update_yaxes(tickprefix="$", gridcolor=LINE, rangemode="tozero")
+    fig.update_xaxes(tickformat="%d %b")
+    style(fig, f"Price of {item}", height=280)
+    prices = df["unit_price"].dropna()
+    if len(prices) >= 2 and prices.iloc[0]:
+        change = prices.iloc[-1] / prices.iloc[0] - 1
+        note = (f"Bought **{len(df)} times**. Price went from **${prices.iloc[0]:,.2f}** to "
+                f"**${prices.iloc[-1]:,.2f}** ({change:+.0%}).")
+    else:
+        note = f"Bought **{len(df)} time{'s' if len(df) != 1 else ''}** so far."
+    return gr.update(value=table, visible=True), gr.update(value=fig, visible=True), note
+
+
+def save_budget(value, period, store, category):
+    set_setting("monthly_budget", max(float(value or 0), 0))
+    return kpi_cards(period, store)
+
+
+# ---------------- Overview page ----------------
+PRODUCE = [("veg_carrot", "#FCE7D6", "#D9631E"), ("veg_apple", "#FBE3E1", "#C2453D"),
+           ("veg_lemon", "#FBF3CF", "#B08A0A"), ("veg_salad", "#E3F1DD", "#4E8C3A"),
+           ("veg_pepper", "#FBE3E1", "#C2453D"), ("veg_milk", "#E3EEF9", "#3E7CC2"),
+           ("veg_egg", "#F7EBD6", "#A5752A"), ("veg_bread", "#F7EBD6", "#A5752A"),
+           ("veg_mushroom", "#EDE7F6", "#7A55B5")]
+
+
+def welcome_html():
+    veg = "".join(f'<span style="background:{bg};color:{fg}">{ICONS[k]}</span>' for k, bg, fg in PRODUCE)
+    return ('<div class="welcome"><div><h1>Overview</h1><p>Your grocery spending at a glance.</p></div>'
+            f'<div class="produce" aria-hidden="true">{veg}</div></div>')
+
+
+def recent_html(df):
+    if df.empty:
+        return EMPTY
+    g = (df.groupby("receipt_id")
+           .agg(date=("receipt_date", "first"), store=("store", "first"), total=("amount", "sum"),
+                items=("category", lambda c: int((c != "Tax").sum())))
+           .sort_values("date", ascending=False).head(5))
+    rows = "".join(f"<tr><td>{d:%d %b %Y}</td><td>{s}</td><td class='r'>{n}</td><td class='r'>${t:,.2f}</td></tr>"
+                   for d, s, n, t in zip(g["date"], g["store"], g["items"], g["total"]))
+    return ('<div class="cats"><h3>Recent receipts</h3><table class="mini"><thead><tr><th>Date</th><th>Store</th>'
+            f'<th class="r">Items</th><th class="r">Total</th></tr></thead><tbody>{rows}</tbody></table></div>')
+
+
+def insights_html(df):
+    if df.empty:
+        return EMPTY
+    out = []
+    items = df[df["category"] != "Tax"].sort_values("receipt_date")
+    best = None
+    for name, g in items.groupby("item"):
+        p = g["unit_price"].dropna()
+        if len(p) >= 2 and p.iloc[0] and p.iloc[-1] > p.iloc[0]:
+            ch = p.iloc[-1] / p.iloc[0] - 1
+            if not best or ch > best[0]:
+                best = (ch, name.title(), p.iloc[0], p.iloc[-1], g["receipt_date"].iloc[0])
+    if best:
+        out.append(("#B7791F", "up", f"{best[1]} up {best[0]:.0%}",
+                    f"${best[2]:,.2f} → ${best[3]:,.2f} since {best[4]:%d %b}"))
+    by = items.groupby("category")["amount"].sum().sort_values(ascending=False)
+    if len(by):
+        top = by.index[0]
+        out.append((CAT_COLORS.get(top, "#7D8A99"), "crown", f"{top} leads",
+                    f"{by.iloc[0] / by.sum():.0%} of everything you’ve bought"))
+    bags = items[items["item"].str.contains("REUBL|BAG", case=False, na=False)]["amount"].sum()
+    if bags:
+        out.append(("#2F7A3B", "bag", f"Bags: ${bags:,.2f} so far", "Bring your own to skip the fee"))
+    dates = sorted(df.drop_duplicates("receipt_id")["receipt_date"].dropna())
+    if len(dates) >= 2:
+        gap = (dates[-1] - dates[0]).days / (len(dates) - 1)
+        out.append(("#3E7CC2", "calendar", f"You shop about every {gap:.0f} days", f"{len(dates)} trips recorded"))
+    rows = "".join(f'<div class="ins"><span class="ic" style="background:{c}">{ICONS[i]}</span>'
+                   f'<div><b>{t}</b><span>{s}</span></div></div>' for c, i, t, s in out[:4])
+    return f'<div class="cats"><h3>Quick insights</h3>{rows}</div>'
+
+
+def overview_view(period, store, category):
+    df = filter_df(prepared(), period, store, category)
+    return kpi_cards(period, store), category_bars(df), recent_html(df), insights_html(df)
+
+
+# ---------------- Records page ----------------
+def records_table(period=PERIODS[0], store=ALL_STORES, category=ALL_CATS):
+    df = filter_df(prepared(), period, store, category)
+    cols = ["Date", "Store", "Item", "Qty", "Unit", "Unit price", "Amount", "Category"]
+    if df.empty:
+        return pd.DataFrame(columns=cols)
     df = df.sort_values(["receipt_date", "receipt_id"], ascending=False)
-    out = df[["receipt_date", "store", "item", "qty", "unit", "unit_price", "amount", "category"]]
-    out.columns = ["Date", "Store", "Item", "Qty", "Unit", "Unit price", "Amount", "Category"]
+    out = df[["receipt_date", "store", "item", "qty", "unit", "unit_price", "amount", "category"]].copy()
+    out["receipt_date"] = out["receipt_date"].dt.strftime("%Y-%m-%d")
+    out.columns = cols
     return out
 
 
-def refresh_all():
-    return (*dashboard(), records_table(), gr.update(choices=receipt_choices(), value=[]))
+def refresh_all(period=PERIODS[0], store=ALL_STORES, category=ALL_CATS):
+    stores = store_choices()
+    store = store if store in stores else ALL_STORES
+    return (*overview_view(period, store, category), *spending_view(period, store, category),
+            records_table(period, store, category),
+            gr.update(choices=receipt_choices(), value=[]), gr.update(choices=stores, value=store))
 
 
 def export_excel():
@@ -462,17 +707,31 @@ def process_receipt(image, date_override="", store_override=""):
     return {**base, "kind": "saved", "matched": matched, "message": message}
 
 
-def scan(image, date_override, store_override):
+def lan_ip():
+    """Find this laptop's address on the Wi-Fi (no data is actually sent)."""
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80))
+        return s.getsockname()[0]
+    except OSError:
+        return None
+    finally:
+        s.close()
+
+
+def scan(image, date_override, store_override, period, store, category):
     if image is None:
-        return (gr.update(),) * 9
+        return (gr.update(),) * (3 + N_REFRESH)
     res = process_receipt(image, date_override, store_override)
     view = res["view"]
-    return (gr.update(value=view, visible=not view.empty), res["message"], res["text"], *refresh_all())
+    return (gr.update(value=view, visible=not view.empty), res["message"], res["text"],
+            *refresh_all(period, store, category))
 
 
-def read_many(files, progress=gr.Progress()):
+def read_many(files, period, store, category, progress=gr.Progress()):
     if not files:
-        return (gr.update(visible=False), "Add some receipt photos first.", *refresh_all())
+        return (gr.update(visible=False), "Add some receipt photos first.", *refresh_all(period, store, category))
     rows, saved, flagged = [], 0, 0
     for i, f in enumerate(files):
         path = f if isinstance(f, str) else f.name
@@ -494,8 +753,34 @@ def read_many(files, progress=gr.Progress()):
     summary = pd.DataFrame(rows, columns=["Photo", "Store", "Date", "Items", "Paid", "Result"])
     note = f"**Saved {saved} of {len(files)} receipts.**"
     if flagged:
-        note += f" {flagged} didn't match their subtotal; open the Records tab to check them."
-    return (gr.update(value=summary, visible=True), note, *refresh_all())
+        note += f" {flagged} didn't match their subtotal; check them in Records."
+    return (gr.update(value=summary, visible=True), note, *refresh_all(period, store, category))
+
+
+# ---------------- QR code for phones ----------------
+def phone_link(request: gr.Request):
+    """Work out the address a phone should open, from how this page was reached."""
+    host = (request.headers.get("host") or "") if request else ""
+    if not host:
+        return None
+    if host.startswith(("127.0.0.1", "localhost", "0.0.0.0")):
+        ip = lan_ip()
+        port = host.split(":")[1] if ":" in host else "7860"
+        return f"http://{ip}:{port}" if ip else None
+    proto = request.headers.get("x-forwarded-proto") or ("https" if "gradio.live" in host else "http")
+    return f"{proto}://{host}"
+
+
+def phone_qr(request: gr.Request):
+    url = phone_link(request)
+    if not url:
+        return gr.update(visible=False), ""
+    import io
+    import qrcode
+    buf = io.BytesIO()
+    qrcode.make(url, border=2, box_size=8).save(buf, format="PNG")
+    buf.seek(0)
+    return gr.update(value=Image.open(buf), visible=True), f'<p class="qrurl">{url}</p>'
 
 
 # ---------------- Look and feel ----------------
@@ -524,27 +809,67 @@ THEME = gr.themes.Base(
 )
 
 CSS = f"""
-.gradio-container {{ max-width: 1040px !important; margin: 0 auto !important; }}
-#header h1 {{ font-size: 30px; font-weight: 650; letter-spacing: -0.02em; margin: 12px 0 4px; color: {INK}; }}
-#header p {{ color: {MUTED}; margin: 0 0 6px; font-size: 15px; }}
-.stats {{ display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: #fff;
-          border: 1px solid {LINE}; border-radius: 14px; }}
-.stats > div {{ padding: 18px 20px; border-left: 1px solid {LINE}; }}
-.stats > div:first-child {{ border-left: none; }}
+.gradio-container {{ max-width: 1120px !important; margin: 0 auto !important; }}
+#shell {{ gap: 24px !important; align-items: flex-start !important; flex-wrap: wrap !important; }}
+#side {{ background: #fff; border: 1px solid {LINE}; border-radius: 16px; padding: 16px 12px !important;
+         position: sticky; top: 12px; }}
+#content {{ min-width: 320px !important; }}
+#brand {{ display: flex; align-items: center; gap: 10px; margin: 2px 4px 14px; }}
+#brand .mark {{ width: 32px; height: 32px; border-radius: 9px; background: {ACCENT}; color: #fff;
+                display: grid; place-items: center; }}
+#brand .mark svg {{ width: 20px; height: 20px; }}
+#brand span:last-child {{ font-size: 19px; font-weight: 700; letter-spacing: -0.01em; color: {INK}; }}
+.nav button {{ justify-content: flex-start !important; text-align: left !important; border: none !important;
+               box-shadow: none !important; font-weight: 500 !important; padding: 10px 12px !important; }}
+.nav button.secondary {{ background: transparent !important; color: {MUTED} !important; }}
+.nav button.secondary:hover {{ background: {BG} !important; color: {INK} !important; }}
+.nav button.primary {{ background: {ACCENT} !important; color: #fff !important; }}
+.welcome {{ display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap;
+            background: #fff; border: 1px solid {LINE}; border-radius: 16px; padding: 18px 20px; }}
+.welcome h1 {{ margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: {INK}; }}
+.welcome p {{ margin: 4px 0 0; color: {MUTED}; }}
+.produce {{ display: flex; gap: 8px; flex-wrap: wrap; }}
+.produce span {{ width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; }}
+.produce svg {{ width: 21px; height: 21px; }}
+table.mini {{ width: 100%; border-collapse: collapse; font-size: 14px; }}
+table.mini th {{ text-align: left; font-weight: 600; color: {ACCENT}; background: #E7F2E3; padding: 8px 10px; }}
+table.mini td {{ padding: 9px 10px; border-bottom: 1px solid {LINE}; font-variant-numeric: tabular-nums; }}
+table.mini .r {{ text-align: right; }}
+.ins {{ display: flex; gap: 12px; align-items: flex-start; padding: 7px 0; }}
+.ins .ic {{ width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; flex: none; }}
+.ins .ic svg {{ width: 18px; height: 18px; }}
+.ins b {{ display: block; font-weight: 600; color: {INK}; }}
+.ins span {{ color: {MUTED}; font-size: 14px; }}
+.side-label {{ color: {MUTED}; font-size: 13px; margin: 14px 0 2px; }}
+.qrurl {{ font-size: 12px; color: {MUTED}; word-break: break-all; margin: 4px 0 0; }}
+.page-title h1 {{ font-size: 28px; font-weight: 650; letter-spacing: -0.02em; margin: 6px 0 2px; color: {INK}; }}
+.page-title p {{ color: {MUTED}; margin: 0 0 8px; font-size: 15px; }}
+.stats {{ display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }}
+.stats > div {{ background: #fff; border: 1px solid {LINE}; border-radius: 14px; padding: 14px 16px; }}
 .stats .label {{ display: block; color: {MUTED}; font-size: 13px; }}
-.stats .value {{ display: block; margin-top: 4px; font-size: 26px; font-weight: 650;
-                 letter-spacing: -0.01em; color: {INK}; font-variant-numeric: tabular-nums; }}
-.empty {{ padding: 44px 24px; text-align: center; color: {MUTED}; background: #fff;
+.stats .value {{ display: block; margin: 2px 0; font-size: 24px; font-weight: 650; letter-spacing: -0.01em;
+                 color: {INK}; font-variant-numeric: tabular-nums; }}
+.stats .sub {{ display: block; color: {MUTED}; font-size: 13px; }}
+.good {{ color: {ACCENT}; }} .warn {{ color: #B7791F; }} .bad {{ color: #C2453D; }}
+.cats {{ background: #fff; border: 1px solid {LINE}; border-radius: 14px; padding: 14px 16px; }}
+.cats h3 {{ font-size: 15px; font-weight: 600; margin: 0 0 10px; color: {INK}; }}
+.catrow {{ display: grid; grid-template-columns: 26px 130px minmax(0, 1fr) 76px 40px; align-items: center;
+           gap: 8px; padding: 5px 0; font-size: 14px; color: {INK}; }}
+.caticon svg {{ width: 20px; height: 20px; display: block; }}
+.track {{ height: 9px; border-radius: 5px; background: {BG}; overflow: hidden; }}
+.fill {{ display: block; height: 9px; border-radius: 5px; }}
+.catamt {{ text-align: right; font-variant-numeric: tabular-nums; }}
+.catpct {{ text-align: right; color: {MUTED}; font-size: 13px; font-variant-numeric: tabular-nums; }}
+.empty {{ padding: 40px 24px; text-align: center; color: {MUTED}; background: #fff;
           border: 1px dashed #CDD3CF; border-radius: 14px; line-height: 1.6; }}
 .empty strong {{ color: {INK}; }}
-#status {{ min-height: 24px; }}
-table td, table th {{ font-variant-numeric: tabular-nums; }}
 .hint {{ color: {MUTED}; font-size: 14px; }}
-@media (max-width: 640px) {{
+table td, table th {{ font-variant-numeric: tabular-nums; }}
+@media (max-width: 720px) {{
   .stats {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
-  .stats > div:nth-child(3) {{ border-left: none; }}
-  .stats > div:nth-child(n+3) {{ border-top: 1px solid {LINE}; }}
-  .stats .value {{ font-size: 22px; }}
+  .stats .value {{ font-size: 20px; }}
+  .catrow {{ grid-template-columns: 24px 96px minmax(0, 1fr) 68px; }}
+  .catpct {{ display: none; }}
 }}
 """
 
@@ -553,88 +878,156 @@ FROM expenses
 GROUP BY category
 ORDER BY spent DESC"""
 
+PAGES = [("Overview", ""),
+         ("Scan", "Snap a receipt and your spending updates itself."),
+         ("Upload several", "Add a handful of receipt photos at once. Each takes about half a minute."),
+         ("Spend Analytics", "Where your grocery money goes, and how it changes."),
+         ("Reports", "Every line from every receipt, plus export, delete and SQL.")]
+
+
+def title_html(i):
+    name, sub = PAGES[i]
+    return "" if i == 0 else f'<div class="page-title"><h1>{name}</h1><p>{sub}</p></div>'
+
+
 # ---------------- Layout ----------------
 with gr.Blocks(title="Groceries") as demo:
-    gr.HTML('<div id="header"><h1>Groceries</h1>'
-            '<p>Snap a receipt and your spending updates itself.</p></div>')
+    with gr.Row(equal_height=False, elem_id="shell"):
+        # Left column: sits beside the pages, so it never covers them
+        with gr.Column(scale=0, min_width=240, elem_id="side"):
+            gr.HTML(f'<div id="brand"><span class="mark">{ICONS["_logo"]}</span><span>Groceries</span></div>')
+            nav_btns = [gr.Button(name, variant="primary" if i == 0 else "secondary", size="md",
+                                  elem_classes="nav") for i, (name, _) in enumerate(PAGES)]
+            gr.HTML('<p class="side-label">Filters</p>')
+            f_period = gr.Dropdown(PERIODS, value=PERIODS[0], label="Period")
+            f_store = gr.Dropdown([ALL_STORES], value=ALL_STORES, label="Store")
+            f_cat = gr.Dropdown([ALL_CATS] + CATEGORIES + ["Tax"], value=ALL_CATS, label="Category")
+            gr.HTML('<p class="side-label">Open on your phone</p>')
+            qr_img = gr.Image(show_label=False, interactive=False, height=170, visible=False,
+                              buttons=[], container=False)
+            qr_url = gr.HTML()
 
-    with gr.Tab("Scan"):
-        with gr.Row(equal_height=False):
-            with gr.Column(scale=5):
-                image = gr.Image(type="pil", sources=["upload", "webcam"], height=440,
-                                 label="Receipt photo")
-                with gr.Accordion("Date or store wrong? Set them here", open=False):
-                    date_in = gr.Textbox(label="Date", placeholder="YYYY-MM-DD, leave blank to read it")
-                    store_in = gr.Textbox(label="Store", placeholder="Leave blank to read it")
-            with gr.Column(scale=6):
-                status = gr.Markdown("Take a photo or drop one in. The receipt is read and saved "
-                                     "automatically.", elem_id="status")
-                items = gr.Dataframe(label="Items", interactive=False, wrap=True, visible=False)
-                with gr.Accordion("What the model read", open=False):
-                    raw_text = gr.Textbox(lines=14, show_label=False)
+        with gr.Column(scale=1, elem_id="content"):
+            page_title = gr.HTML(title_html(0))
 
-    with gr.Tab("Upload several"):
-        gr.Markdown("Add up to a handful of receipt photos at once. Each one takes about "
-                    "half a minute to read.", elem_classes="hint")
-        files = gr.File(file_count="multiple", file_types=["image"], label="Receipt photos", height=200)
-        read_btn = gr.Button("Read all receipts", variant="primary")
-        batch_note = gr.Markdown()
-        batch_table = gr.Dataframe(interactive=False, wrap=True, label="Results", visible=False)
+            with gr.Column(visible=True) as page_home:
+                gr.HTML(welcome_html())
+                ov_kpi = gr.HTML()
+                with gr.Row(equal_height=False):
+                    with gr.Column(scale=1):
+                        ov_bars = gr.HTML()
+                    with gr.Column(scale=1):
+                        ov_ins = gr.HTML()
+                ov_recent = gr.HTML()
 
-    with gr.Tab("Spending"):
-        kpi = gr.HTML()
-        with gr.Row():
-            pie = gr.Plot(show_label=False)
-            top = gr.Plot(show_label=False)
-        trend = gr.Plot(show_label=False)
+            with gr.Column(visible=False) as page_scan:
+                with gr.Row(equal_height=False):
+                    with gr.Column(scale=5):
+                        image = gr.Image(type="pil", sources=["upload", "webcam"], height=440, label="Receipt photo")
+                        with gr.Accordion("Date or store wrong? Set them here", open=False):
+                            date_in = gr.Textbox(label="Date", placeholder="YYYY-MM-DD, leave blank to read it")
+                            store_in = gr.Textbox(label="Store", placeholder="Leave blank to read it")
+                    with gr.Column(scale=6):
+                        status = gr.Markdown("Take a photo or drop one in. The receipt is read and saved automatically.")
+                        items = gr.Dataframe(label="Items", interactive=False, wrap=True, visible=False)
+                        with gr.Accordion("What the model read", open=False):
+                            raw_text = gr.Textbox(lines=14, show_label=False)
 
-    with gr.Tab("Records"):
-        records = gr.Dataframe(label="Every item you've scanned", interactive=False, wrap=True,
-                               max_height=420, show_search="search")
-        with gr.Row():
-            export_btn = gr.Button("Download as Excel")
-            file_out = gr.File(label="Excel file", height=80)
-        with gr.Accordion("Delete receipts", open=False):
-            sel_all = gr.Checkbox(label="Select all", value=False)
-            del_pick = gr.CheckboxGroup(label="Receipts", choices=[])
-            del_btn = gr.Button("Delete selected", variant="stop")
-            with gr.Row(visible=False) as confirm_row:
-                confirm_text = gr.Markdown()
-                yes_btn = gr.Button("Yes, delete", variant="stop", scale=0, min_width=120)
-                no_btn = gr.Button("Cancel", scale=0, min_width=100)
-            del_note = gr.Markdown()
-        with gr.Accordion("Query with SQL", open=False):
-            gr.Markdown("Everything lives in one table called `expenses`, with columns receipt_id, "
-                        "receipt_date, store, item, qty, unit, unit_price, amount, department, "
-                        "category and created_at. Queries are read-only.", elem_classes="hint")
-            sql_in = gr.Code(value=SQL_EXAMPLE, language="sql", label="Query", lines=5)
-            sql_btn = gr.Button("Run query", variant="primary")
-            sql_note = gr.Markdown()
-            sql_out = gr.Dataframe(interactive=False, wrap=True, label="Result")
+            with gr.Column(visible=False) as page_bulk:
+                files = gr.File(file_count="multiple", file_types=["image"], label="Receipt photos", height=200)
+                read_btn = gr.Button("Read all receipts", variant="primary")
+                batch_note = gr.Markdown()
+                batch_table = gr.Dataframe(interactive=False, wrap=True, label="Results", visible=False)
 
-    refresh_outputs = [kpi, pie, trend, top, records, del_pick]
-    image.change(scan, [image, date_in, store_in], [items, status, raw_text, *refresh_outputs])
-    read_btn.click(read_many, files, [batch_table, batch_note, *refresh_outputs])
+            with gr.Column(visible=False) as page_spend:
+                kpi = gr.HTML()
+                with gr.Row(equal_height=False):
+                    with gr.Column(scale=1):
+                        bars = gr.HTML()
+                    with gr.Column(scale=1):
+                        top = gr.Plot(show_label=False)
+                trend = gr.Plot(show_label=False)
+                with gr.Accordion("Monthly budget", open=False):
+                    with gr.Row():
+                        budget_in = gr.Number(label="Budget per month ($)", value=get_budget, minimum=0)
+                        budget_btn = gr.Button("Save budget", scale=0, min_width=140)
+                gr.HTML('<div class="page-title"><h1 style="font-size:20px">Look closer</h1>'
+                        '<p>Pick a category, then an item, to see every purchase and how its price changed.</p></div>')
+                with gr.Row():
+                    d_cat = gr.Dropdown(label="Category", choices=[], value=None)
+                    d_item = gr.Dropdown(label="Item", choices=[], value=None)
+                d_items = gr.Dataframe(label="Items in this category", interactive=False, wrap=True, visible=False)
+                d_note = gr.Markdown()
+                d_price = gr.Plot(show_label=False, visible=False)
+                d_buys = gr.Dataframe(label="Every purchase", interactive=False, wrap=True, visible=False)
+
+            with gr.Column(visible=False) as page_records:
+                records = gr.Dataframe(label="Every item you've scanned (follows the filters)",
+                                       interactive=False, wrap=True, max_height=420, show_search="search")
+                with gr.Row():
+                    export_btn = gr.Button("Download as Excel")
+                    file_out = gr.File(label="Excel file", height=80)
+                with gr.Accordion("Delete receipts", open=False):
+                    sel_all = gr.Checkbox(label="Select all", value=False)
+                    del_pick = gr.CheckboxGroup(label="Receipts", choices=[])
+                    del_btn = gr.Button("Delete selected", variant="stop")
+                    with gr.Row(visible=False) as confirm_row:
+                        confirm_text = gr.Markdown()
+                        yes_btn = gr.Button("Yes, delete", variant="stop", scale=0, min_width=120)
+                        no_btn = gr.Button("Cancel", scale=0, min_width=100)
+                    del_note = gr.Markdown()
+                with gr.Accordion("Query with SQL", open=False):
+                    gr.Markdown("Everything lives in one table called `expenses`, with columns receipt_id, "
+                                "receipt_date, store, item, qty, unit, unit_price, amount, department, "
+                                "category and created_at. Queries are read-only.", elem_classes="hint")
+                    sql_in = gr.Code(value=SQL_EXAMPLE, language="sql", label="Query", lines=5)
+                    sql_btn = gr.Button("Run query", variant="primary")
+                    sql_note = gr.Markdown()
+                    sql_out = gr.Dataframe(interactive=False, wrap=True, label="Result")
+
+    # ----- wiring -----
+    pages = [page_home, page_scan, page_bulk, page_spend, page_records]
+    filters = [f_period, f_store, f_cat]
+    refresh_outputs = [ov_kpi, ov_bars, ov_recent, ov_ins,
+                       kpi, bars, trend, top, d_cat, d_item, d_items, d_price, d_buys, d_note,
+                       records, del_pick, f_store]
+
+    def go_to(i):
+        return ([title_html(i)] + [gr.update(visible=j == i) for j in range(len(pages))]
+                + [gr.update(variant="primary" if j == i else "secondary") for j in range(len(pages))])
+
+    for i, b in enumerate(nav_btns):
+        b.click(lambda i=i: go_to(i), None, [page_title, *pages, *nav_btns])
+
+    for f in filters:
+        f.change(refresh_all, filters, refresh_outputs)
+
+    image.change(scan, [image, date_in, store_in, *filters], [items, status, raw_text, *refresh_outputs])
+    read_btn.click(read_many, [files, *filters], [batch_table, batch_note, *refresh_outputs])
+    budget_btn.click(save_budget, [budget_in, *filters], kpi)
+    d_cat.change(drill_category, [d_cat, f_period, f_store], [d_items, d_item, d_price, d_buys, d_note])
+    d_item.change(drill_item, [d_item, f_period, f_store], [d_buys, d_price, d_note])
     sel_all.input(toggle_all, sel_all, del_pick)
     del_btn.click(ask_delete, del_pick, [confirm_row, confirm_text, del_note])
-    yes_btn.click(delete_receipts, del_pick, [del_note, confirm_row, sel_all, *refresh_outputs])
+    yes_btn.click(delete_receipts, [del_pick, *filters], [del_note, confirm_row, sel_all, *refresh_outputs])
     no_btn.click(lambda: gr.update(visible=False), None, confirm_row)
     sql_btn.click(run_sql, sql_in, [sql_out, sql_note])
     export_btn.click(export_excel, None, file_out)
-    demo.load(refresh_all, None, refresh_outputs)
+    demo.load(refresh_all, filters, refresh_outputs)
+    demo.load(phone_qr, None, [qr_img, qr_url])
+
+N_REFRESH = len(refresh_outputs)
 
 
-def lan_ip():
-    """Find this laptop's address on the Wi-Fi (no data is actually sent)."""
-    import socket
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+def print_qr(url):
+    """Show a QR code in the terminal so a phone camera can open the app."""
     try:
-        s.connect(("8.8.8.8", 80))
-        return s.getsockname()[0]
-    except OSError:
-        return None
-    finally:
-        s.close()
+        import qrcode
+        qr = qrcode.QRCode(border=1)
+        qr.add_data(url)
+        qr.print_ascii(invert=True)
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":
@@ -652,7 +1045,8 @@ if __name__ == "__main__":
         print("\n" + "=" * 55)
         print("  Open on this laptop:  http://127.0.0.1:7860")
         if ip:
-            print(f"  Open on your phone:   http://{ip}:7860  (same Wi-Fi)")
+            print(f"  Open on your phone:   http://{ip}:7860  (same Wi-Fi), or scan:")
+            print_qr(f"http://{ip}:7860")
         print("=" * 55 + "\n")
 
     demo.launch(server_name="0.0.0.0", share=SHARE, show_error=True,
