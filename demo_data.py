@@ -2,9 +2,9 @@
 import json
 
 
-def _r(date, subtotal, tax, items):
+def _r(date, subtotal, tax, items, time=None):
     return json.dumps({
-        "store": "No Frills", "date": date, "subtotal": subtotal, "tax": tax,
+        "store": "No Frills", "date": date, "time": time, "subtotal": subtotal, "tax": tax,
         "total": round(subtotal + tax, 2),
         "items": [{"name": n, "qty": q, "unit": u, "unit_price": p, "amount": a,
                    "department": d, "category": c} for n, q, u, p, a, d, c in items]})
@@ -16,7 +16,7 @@ DEMO_RECEIPTS = [
         ("GRD A LRG BRWN", 1, "ea", 5.99, 5.99, "DAIRY", "Dairy & Eggs"),
         ("THAI GRN 75G", 1, "ea", 4.00, 4.00, "PRODUCE", "Produce"),
         ("BANANA ORGANIC", 1.165, "kg", 2.40, 2.80, "PRODUCE", "Produce"),
-        ("REUBL SHRT PC OP", 1, "ea", 0.35, 0.35, "OTHER SERVICES", "Other")]),
+        ("REUBL SHRT PC OP", 1, "ea", 0.35, 0.35, "OTHER SERVICES", "Other")], time="13:51"),
     _r("2026-10-13", 35.86, 0.05, [
         ("NN SOUP CUP SHR", 2, "ea", 1.00, 2.00, "GROCERY", "Pantry"),
         ("NN EV OLIVE OIL", 1, "ea", 9.00, 9.00, "GROCERY", "Pantry"),
@@ -26,7 +26,7 @@ DEMO_RECEIPTS = [
         ("TOMATO GRAPE 283", 1, "ea", 2.99, 2.99, "PRODUCE", "Produce"),
         ("CH EVERYTHING BR", 1, "ea", 3.00, 3.00, "BAKERY COMMERCIAL", "Bakery"),
         ("MA PROSCIUTTO", 1, "ea", 5.00, 5.00, "DELI", "Meat & Seafood"),
-        ("REUBL SHRT PC", 1, "ea", 0.35, 0.35, "OTHER SERVICES", "Other")]),
+        ("REUBL SHRT PC", 1, "ea", 0.35, 0.35, "OTHER SERVICES", "Other")], time="12:20"),
     _r("2026-10-18", 39.07, 1.15, [
         ("NSTL CRN MLK R M", 1, "ea", 3.29, 3.29, "GROCERY", "Pantry"),
         ("HARIBO GOLDBEAR", 2, "ea", 2.79, 5.58, "GROCERY", "Snacks"),
@@ -37,7 +37,7 @@ DEMO_RECEIPTS = [
         ("PLUM BLACK", 0.37, "kg", 8.80, 3.26, "PRODUCE", "Produce"),
         ("PARSLEY ITALIAN", 1, "ea", 2.49, 2.49, "PRODUCE", "Produce"),
         ("NN ANC GRN BREAD", 1, "ea", 3.29, 3.29, "BAKERY COMMERCIAL", "Bakery"),
-        ("MA EURO CHARCUTE", 1, "ea", 6.99, 6.99, "DELI", "Meat & Seafood")]),
+        ("MA EURO CHARCUTE", 1, "ea", 6.99, 6.99, "DELI", "Meat & Seafood")], time="18:47"),
     _r("2026-10-28", 41.62, 0.24, [
         ("NN CHIPS", 1, "ea", 1.50, 1.50, "GROCERY", "Snacks"),
         ("PC 2% GRK PCH/MA", 1, "ea", 3.99, 3.99, "DAIRY", "Dairy & Eggs"),
@@ -50,5 +50,5 @@ DEMO_RECEIPTS = [
         ("ORIGINAL CHICKEN", 1, "ea", 8.49, 8.49, "MEATS", "Meat & Seafood"),
         ("ACE MULTI LOAF", 1, "ea", 5.00, 5.00, "BAKERY INSTORE", "Bakery"),
         ("MA PROSCIUTTO", 1, "ea", 6.99, 6.99, "DELI", "Meat & Seafood"),
-        ("REUBL SHRT PC OP", 1, "ea", 0.35, 0.35, "OTHER SERVICES", "Other")]),
+        ("REUBL SHRT PC OP", 1, "ea", 0.35, 0.35, "OTHER SERVICES", "Other")], time="13:47"),
 ]

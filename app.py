@@ -59,7 +59,7 @@ def get_model():
 
 PROMPT = f"""You are reading a photo of a grocery store receipt.
 Return ONLY a JSON object, with no other text, in exactly this structure:
-{{"store": "store name", "date": "YYYY-MM-DD",
+{{"store": "store name", "date": "YYYY-MM-DD", "time": "HH:MM",
  "items": [{{"name": "item name as printed", "qty": 1, "unit": "ea", "unit_price": 0.00,
             "amount": 0.00, "department": "", "category": ""}}],
  "subtotal": 0.00, "tax": 0.00, "total": 0.00}}
@@ -74,6 +74,7 @@ Rules:
 - Small fees are purchases too: include reusable bags (e.g. "REUBL SHRT PC" under OTHER SERVICES), deposits and eco fees.
 - Skip lines whose amount is 0.00, and skip subtotal, tax, total, payment and card lines.
 - "date": take it from the printed 4-digit-year date such as 2026/10/18, not from the 2-digit "DateTime" line.
+- "time": the checkout time printed on the receipt, as 24-hour HH:MM (e.g. 16:52), or null if none is printed.
 - Ignore faint mirrored text showing through from the back of the paper.
 - "tax" is the total sales tax (HST/GST/PST). Write numbers without $ signs. Use null if something is not printed."""
 
@@ -177,7 +178,9 @@ def to_receipt(text):
         receipt_date = None
     raw_store = str(data.get("store") or "").strip()
     store = find_store(raw_store) or raw_store.title() or None
-    return {"store": store, "date": receipt_date, "items": items,
+    m = re.match(r"^\s*(\d{1,2})[:.](\d{2})", str(data.get("time") or ""))
+    receipt_time = f"{int(m[1]):02d}:{m[2]}" if m and int(m[1]) < 24 and int(m[2]) < 60 else None
+    return {"store": store, "date": receipt_date, "time": receipt_time, "items": items,
             "subtotal": _num(data.get("subtotal")), "tax": _num(data.get("tax")) or None,
             "total": _num(data.get("total"))}
 
@@ -236,7 +239,7 @@ SCHEMA = {
             item TEXT, qty REAL, unit TEXT, unit_price REAL, amount REAL, department TEXT,
             category TEXT, created_at TEXT)""",
         "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)",
-        "CREATE TABLE IF NOT EXISTS receipt_info (receipt_id TEXT PRIMARY KEY, subtotal REAL, total REAL)",
+        "CREATE TABLE IF NOT EXISTS receipt_info (receipt_id TEXT PRIMARY KEY, subtotal REAL, total REAL, receipt_time TEXT)",
     ],
     "postgres": [
         """CREATE TABLE IF NOT EXISTS expenses (
@@ -244,7 +247,7 @@ SCHEMA = {
             item TEXT, qty NUMERIC(12,3), unit TEXT, unit_price NUMERIC(12,3), amount NUMERIC(12,2),
             department TEXT, category TEXT, created_at TEXT)""",
         "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)",
-        "CREATE TABLE IF NOT EXISTS receipt_info (receipt_id TEXT PRIMARY KEY, subtotal NUMERIC(12,2), total NUMERIC(12,2))",
+        "CREATE TABLE IF NOT EXISTS receipt_info (receipt_id TEXT PRIMARY KEY, subtotal NUMERIC(12,2), total NUMERIC(12,2), receipt_time TEXT)",
     ],
 }
 
@@ -262,6 +265,9 @@ def get_engine():
             for ddl in SCHEMA[kind]:
                 c.execute(text(ddl))
             have = {col["name"] for col in inspect(c).get_columns("expenses")}
+            info_cols = {col["name"] for col in inspect(c).get_columns("receipt_info")}
+            if "receipt_time" not in info_cols:                # upgrade older databases
+                c.execute(text("ALTER TABLE receipt_info ADD COLUMN receipt_time TEXT"))
             for col, typ in (("unit", "TEXT"), ("unit_price", "REAL"), ("department", "TEXT")):
                 if col not in have:                       # upgrade older databases
                     c.execute(text(f"ALTER TABLE expenses ADD COLUMN {col} {typ}"))
@@ -311,15 +317,16 @@ def save_rows(df):
         df[COLUMNS].to_sql("expenses", c, if_exists="append", index=False)
 
 
-def save_receipt_info(receipt_id, subtotal, total):
-    db_run("""INSERT INTO receipt_info (receipt_id, subtotal, total) VALUES (:r, :s, :t)
-              ON CONFLICT (receipt_id) DO UPDATE SET subtotal = excluded.subtotal, total = excluded.total""",
-           r=receipt_id, s=subtotal, t=total)
+def save_receipt_info(receipt_id, subtotal, total, receipt_time=None):
+    db_run("""INSERT INTO receipt_info (receipt_id, subtotal, total, receipt_time) VALUES (:r, :s, :t, :tm)
+              ON CONFLICT (receipt_id) DO UPDATE SET subtotal = excluded.subtotal, total = excluded.total,
+              receipt_time = excluded.receipt_time""", r=receipt_id, s=subtotal, t=total, tm=receipt_time)
 
 
 def receipt_info():
-    return {rid: (float(s) if s is not None else None)
-            for rid, s in db_rows("SELECT receipt_id, subtotal FROM receipt_info")}
+    """receipt_id -> (printed subtotal, checkout time)."""
+    return {rid: (float(s) if s is not None else None, tm)
+            for rid, s, tm in db_rows("SELECT receipt_id, subtotal, receipt_time FROM receipt_info")}
 
 
 def delete_receipt_ids(ids):
@@ -388,6 +395,15 @@ def nice_date(value):
         return f"{d.day} {d.strftime('%b %Y')}"
     except ValueError:
         return str(value)
+
+
+def nice_time(hhmm):
+    """16:52 -> 4:52 pm"""
+    try:
+        hh, mm = map(int, str(hhmm).split(":"))
+        return f"{(hh % 12) or 12}:{mm:02d} {'am' if hh < 12 else 'pm'}"
+    except ValueError:
+        return str(hhmm)
 
 
 def style(fig, title, height=340):
@@ -746,10 +762,11 @@ def process_receipt(image, date_override="", store_override=""):
     df["receipt_date"], df["store"] = receipt_date, store
     df["created_at"] = dt.datetime.now().isoformat(timespec="seconds")
     save_rows(df)
-    save_receipt_info(df["receipt_id"].iloc[0], r["subtotal"], r["total"])   # for the Matched / Check chip
+    save_receipt_info(df["receipt_id"].iloc[0], r["subtotal"], r["total"], r.get("time"))   # chip + Patterns
 
     gap = items_gap(r)
-    message = (f"**Saved {n_items} items from {store}, {nice_date(receipt_date)}.** "
+    when = nice_date(receipt_date) + (f" at {nice_time(r.get('time'))}" if r.get("time") else "")
+    message = (f"**Saved {n_items} items from {store}, {when}.** "
                f"You paid ${paid:,.2f}.")
     if gap is None:
         matched = None
@@ -811,13 +828,14 @@ def api_data():
     if not df.empty:
         for rid, g in df.groupby("receipt_id", sort=False):
             items = g[g["category"] != "Tax"]
-            printed = info.get(rid)
+            printed, rtime = info.get(rid, (None, None))
             receipts.append({
                 "id": str(rid),
                 "date": str(g["receipt_date"].iloc[0])[:10],
                 "store": g["store"].iloc[0] or "Unknown store",
                 "subtotal": round(float(printed if printed is not None else items["amount"].sum()), 2),
                 "printed": printed is not None,
+                "time": rtime,
                 "tax": round(float(g.loc[g["category"] == "Tax", "amount"].sum()), 2),
                 "items": [{"name": r.item, "qty": _clean(r.qty) or 1, "unit": r.unit or "ea",
                            "unit_price": _clean(r.unit_price), "amount": round(float(r.amount), 2),

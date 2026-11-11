@@ -167,6 +167,23 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--surface-2)}
 .fa .status.err{background:var(--red-soft);color:var(--red-text)}
 .fa .status b{font-weight:600}
 .fa .loading{padding:60px 20px;text-align:center;color:var(--muted)}
+
+.fa .orbit{position:relative;width:132px;height:132px;flex:none}
+.fa .orbit .cart{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px}
+.fa .orbit .cart svg,.fa .orbit .fruit svg{width:100%;height:100%}
+.fa .orbit .ring{position:absolute;inset:0;animation:faspin 40s linear infinite}
+.fa .orbit .slot{position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;transform:rotate(var(--a)) translateY(-49px) rotate(calc(-1 * var(--a)))}
+.fa .orbit .fruit{display:block;width:100%;height:100%;animation:faspin 40s linear infinite reverse}
+.fa .orbit:hover .ring,.fa .orbit:hover .fruit{animation-play-state:paused}
+@keyframes faspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.fa .orbit .ring,.fa .orbit .fruit{animation:none}}
+.fa .chip.clickable{cursor:pointer;border:none}
+.fa .chip.clickable:hover{filter:brightness(.96);text-decoration:underline}
+.fa .budgetpop{margin-bottom:14px;border-color:var(--leaf)}
+.fa .heat{display:grid;grid-template-columns:78px repeat(7,minmax(34px,1fr));gap:4px;font-size:12.5px;min-width:360px}
+.fa .heat div{height:34px;border-radius:7px;display:grid;place-items:center;font-variant-numeric:tabular-nums}
+.fa .heat .lab{background:none;color:var(--muted);justify-items:start;place-items:center start}
+.fa .heat .hd{background:none;color:var(--muted);height:22px}
 </style>
 <div class="topbar">
   <button class="btn" id="menuBtn" aria-label="Open menu" aria-expanded="false" style="padding:8px"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M4 6l16 0"></path><path d="M4 12l16 0"></path><path d="M4 18l16 0"></path></svg></button>
@@ -180,6 +197,7 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--surface-2)}
       <a href="#scan" data-page="scan"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"></path><path d="M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"></path></svg>Scan</a>
       <a href="#upload" data-page="upload"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M15 8h.01"></path><path d="M12.5 21h-6.5a3 3 0 0 1 -3 -3v-12a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v6.5"></path><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l4 4"></path><path d="M14 14l1 -1c.67 -.644 1.45 -.824 2.182 -.54"></path><path d="M16 19h6"></path><path d="M19 16v6"></path></svg>Upload several</a>
       <a href="#analytics" data-page="analytics"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M10 3.2a9 9 0 1 0 10.8 10.8a1 1 0 0 0 -1 -1h-3.8a4.1 4.1 0 1 1 -5 -5v-4a.9 .9 0 0 0 -1 -.8"></path><path d="M15 3.5a9 9 0 0 1 5.5 5.5h-4.5a9 9 0 0 0 -1 -1v-4.5"></path></svg>Spend Analytics</a>
+      <a href="#patterns" data-page="patterns"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4"></path><path d="M18 14v4h4"></path><path d="M14 18a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"></path><path d="M15 3v4"></path><path d="M7 3v4"></path><path d="M3 11h16"></path></svg>Shopping Patterns</a>
       <a href="#reports" data-page="reports"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M14 3v4a1 1 0 0 0 1 1h4"></path><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2"></path><path d="M9 9l1 0"></path><path d="M9 13l6 0"></path><path d="M9 17l6 0"></path></svg>Reports</a>
       <a href="#pantry" data-page="pantry"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 5a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2l0 -14"></path><path d="M5 10h14"></path><path d="M9 13v3"></path><path d="M9 6v1"></path></svg>Pantry</a>
     </nav>
@@ -195,20 +213,17 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--surface-2)}
       <div class="panel welcome" style="margin-bottom:14px">
         <div><h1 style="margin:0;font-size:28px;font-weight:700;letter-spacing:-0.02em">Overview</h1>
           <p class="muted" style="margin:4px 0 0">Your grocery spending at a glance.</p></div>
-        <div class="produce" aria-hidden="true">
-          <span style="background:#FCE7D6;color:#D9631E"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3 21s9.834 -3.489 12.684 -6.34a4.487 4.487 0 0 0 0 -6.344a4.483 4.483 0 0 0 -6.342 0c-2.86 2.861 -6.347 12.689 -6.347 12.689l.005 -.005"></path><path d="M9 13l-1.5 -1.5"></path><path d="M16 14l-2 -2"></path><path d="M22 8s-1.14 -2 -3 -2c-1.406 0 -3 2 -3 2s1.14 2 3 2s3 -2 3 -2"></path><path d="M16 2s-2 1.14 -2 3s2 3 2 3s2 -1.577 2 -3c0 -1.86 -2 -3 -2 -3"></path></svg></span>
-          <span style="background:#FBE3E1;color:#C2453D"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M4 11.319c0 3.102 .444 5.319 2.222 7.978c1.351 1.797 3.156 2.247 5.08 .988c.426 -.268 .97 -.268 1.397 0c1.923 1.26 3.728 .809 5.079 -.988c1.778 -2.66 2.222 -4.876 2.222 -7.977c0 -2.661 -1.99 -5.32 -4.444 -5.32c-1.267 0 -2.41 .693 -3.22 1.44a.5 .5 0 0 1 -.672 0c-.809 -.746 -1.953 -1.44 -3.22 -1.44c-2.454 0 -4.444 2.66 -4.444 5.319"></path><path d="M7 12c0 -1.47 .454 -2.34 1.5 -3"></path><path d="M12 7c0 -1.2 .867 -4 3 -4"></path></svg></span>
-          <span style="background:#FBF3CF;color:#B08A0A"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M17.536 3.393c3.905 3.906 3.905 10.237 0 14.143c-3.906 3.905 -10.237 3.905 -14.143 0l14.143 -14.143"></path><path d="M5.868 15.06a6.5 6.5 0 0 0 9.193 -9.192"></path><path d="M10.464 10.464l4.597 4.597"></path><path d="M10.464 10.464v6.364"></path><path d="M10.464 10.464h6.364"></path></svg></span>
-          <span style="background:#E3F1DD;color:#4E8C3A"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M4 11h16a1 1 0 0 1 1 1v.5c0 1.5 -2.517 5.573 -4 6.5v1a1 1 0 0 1 -1 1h-8a1 1 0 0 1 -1 -1v-1c-1.687 -1.054 -4 -5 -4 -6.5v-.5a1 1 0 0 1 1 -1"></path><path d="M18.5 11c.351 -1.017 .426 -2.236 .5 -3.714v-1.286h-2.256c-2.83 0 -4.616 .804 -5.64 2.076"></path><path d="M5.255 11.008a12.204 12.204 0 0 1 -.255 -2.008v-1h1.755c.98 0 1.801 .124 2.479 .35"></path><path d="M8 8l1 -4l4 2.5"></path><path d="M13 11v-.5a2.5 2.5 0 1 0 -5 0v.5"></path></svg></span>
-          <span style="background:#FBE3E1;color:#C2453D"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M13 11c0 2.21 -2.239 4 -5 4s-5 -1.79 -5 -4a8 8 0 1 0 16 0a3 3 0 0 0 -6 0"></path><path d="M16 8c0 -2 2 -4 4 -4"></path></svg></span>
-          <span style="background:#E3EEF9;color:#3E7CC2"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M8 6h8v-2a1 1 0 0 0 -1 -1h-6a1 1 0 0 0 -1 1v2"></path><path d="M16 6l1.094 1.759a6 6 0 0 1 .906 3.17v8.071a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2v-8.071a6 6 0 0 1 .906 -3.17l1.094 -1.759"></path><path d="M10 16a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path><path d="M10 10h4"></path></svg></span>
-          <span style="background:#F7EBD6;color:#A5752A"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M19 14.083c0 4.154 -2.966 6.74 -7 6.917c-4.2 0 -7 -2.763 -7 -6.917c0 -5.538 3.5 -11.09 7 -11.083c3.5 .007 7 5.545 7 11.083"></path></svg></span>
-          <span style="background:#F7EBD6;color:#A5752A"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M18 4a3 3 0 0 1 2 5.235v8.765a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-8.764a3 3 0 0 1 1.824 -5.231h12.176v-.005"></path></svg></span>
-          <span style="background:#EDE7F6;color:#7A55B5"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M20 11.1c0 -4.474 -3.582 -8.1 -8 -8.1s-8 3.626 -8 8.1a.9 .9 0 0 0 .9 .9h14.2a.9 .9 0 0 0 .9 -.9"></path><path d="M10 12v7a2 2 0 1 0 4 0v-7"></path></svg></span>
-        </div>
+        <div class="orbit" aria-hidden="true" title="Fresh from Canadian farms"><div class="ring"><span class="slot" style="--a:0deg"><span class="fruit"><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M16 9c-2-1.6-5.4-2-7.6.2-2.6 2.6-2.4 7.6.2 12.2 1.8 3.2 4 5 6 4.4.7-.2 1-.5 1.4-.5s.7.3 1.4.5c2 .6 4.2-1.2 6-4.4 2.6-4.6 2.8-9.6.2-12.2C21.4 7 18 7.4 16 9z" fill="#D9473F"/><path d="M11 12.4c-1 1.2-1.4 3-1 4.6" stroke="#F3A39C" stroke-width="1.6" stroke-linecap="round" fill="none"/><path d="M16 9.4c0-2 .6-3.6 1.8-4.8" stroke="#6B4A2E" stroke-width="1.6" stroke-linecap="round" fill="none"/><path d="M17.6 6.2c1.8-1.6 4.4-1.6 5.6-.6-1.2 1.6-3.6 2.2-5.6.6z" fill="#5FA83E"/></svg></span></span><span class="slot" style="--a:72deg"><span class="fruit"><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M20.6 11.4c-2.4-2.4-6.2-1.4-7.6 1.6L6.4 26.6c-.4.8.4 1.6 1.2 1.2L21.2 21c3-1.4 4-5.2 1.6-7.6z" fill="#EE7A23"/><path d="M12.2 17.6l2 1.6M10.2 21.4l1.8 1.4M14.6 13.8l1.6 1.2" stroke="#C85A12" stroke-width="1.3" stroke-linecap="round"/><path d="M20.4 11.6c.4-3 2.2-5.4 4.8-6.4-.6 2.6-2.2 4.8-4.8 6.4zM21.6 12.6c2.4-1.6 5.4-1.8 7.4-.8-2 1.6-4.8 2-7.4.8zM20.2 11.2c-.8-2.6-.2-5.4 1.4-7.2.6 2.4-.2 5-1.4 7.2z" fill="#5FA83E"/></svg></span></span><span class="slot" style="--a:144deg"><span class="fruit"><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M16 4c3.4 0 5.4 4.4 5.4 10.6S19.4 27 16 27s-5.4-6.2-5.4-12.4S12.6 4 16 4z" fill="#F4C430"/><g stroke="#D9A20F" stroke-width="1" fill="none"><path d="M12 10h8M11.2 14h9.6M11.2 18h9.6M12 22h8"/><path d="M14 5.6v20.8M18 5.6v20.8"/></g><path d="M16 27c-2.6-1.4-5.2-5.6-5.8-10.4-1.6 4.4-1.4 9.6.8 12.4 1.6.6 3.4.2 5-2z" fill="#5FA83E"/><path d="M16 27c2.6-1.4 5.2-5.6 5.8-10.4 1.6 4.4 1.4 9.6-.8 12.4-1.6.6-3.4.2-5-2z" fill="#4E9234"/></svg></span></span><span class="slot" style="--a:216deg"><span class="fruit"><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M6.4 18.4c-1-4.6 2.4-9.6 8-10.6 5.4-1 10.6 1.4 11.4 5.8.8 4.6-2.2 9.4-7.8 10.4-5.6 1-10.6-1.2-11.6-5.6z" fill="#C8955A"/><path d="M9 14.6c1.2-2.4 3.6-4 6.2-4.4" stroke="#E0B886" stroke-width="1.6" stroke-linecap="round" fill="none"/><g fill="#9A6B37"><circle cx="12" cy="18" r="1"/><circle cx="17.6" cy="15" r=".9"/><circle cx="21.4" cy="18.6" r="1"/><circle cx="16" cy="20.8" r=".8"/></g></svg></span></span><span class="slot" style="--a:288deg"><span class="fruit"><svg aria-hidden="true" viewBox="0 0 32 32"><circle cx="11.4" cy="19.4" r="6" fill="#4A5FB0"/><circle cx="20.8" cy="20.6" r="5.4" fill="#3B4C96"/><circle cx="16.4" cy="11.6" r="5.2" fill="#5A70C4"/><g fill="#24305F"><circle cx="11.4" cy="19.4" r="1.5"/><circle cx="20.8" cy="20.6" r="1.4"/><circle cx="16.4" cy="11.6" r="1.4"/></g><g fill="#8C9BE0"><circle cx="11.4" cy="19.4" r=".6"/><circle cx="20.8" cy="20.6" r=".55"/><circle cx="16.4" cy="11.6" r=".55"/></g><path d="M18.4 6.4c1.4-1.2 3.4-1.4 4.6-.6-1.2 1.4-3.2 1.6-4.6.6z" fill="#5FA83E"/></svg></span></span></div><span class="cart"><svg aria-hidden="true" viewBox="0 0 48 48"><path d="M5 8h5.2l4.6 21.2a3 3 0 0 0 2.9 2.4h17.6a3 3 0 0 0 2.9-2.2L42 15H12.2" fill="none" stroke="#2F7A3B" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 22.5h24.6" stroke="#2F7A3B" stroke-width="2.4" stroke-linecap="round" opacity=".45"/><circle cx="19" cy="39" r="3.2" fill="#2F7A3B"/><circle cx="34" cy="39" r="3.2" fill="#2F7A3B"/></svg></span></div>
         <select class="select" id="ovMonth" aria-label="Month"></select>
       </div>
       <div class="grid g4" id="ovKpis" style="margin-bottom:14px"></div>
+      <div class="panel budgetpop" id="budgetPop" hidden>
+        <h2><span>Monthly grocery budget</span><button class="btn" id="bpClose" aria-label="Close" style="padding:4px 10px">✕</button></h2>
+        <div class="qbtns" id="bpQuick"></div>
+        <p class="muted" id="bpSuggest" style="margin:0 0 10px"></p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="muted">$</span><input id="bpIn" type="number" min="0" step="5" class="num" aria-label="Monthly budget in dollars" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 12px;width:140px">
+        <button class="btn primary" id="bpSave">Save budget</button><button class="btn" id="bpClear">No budget</button></div>
+      </div>
       <div class="grid g-wide" style="margin-bottom:14px">
         <div class="panel"><h2>Spend per trip <span class="aside">last 6 trips</span></h2><div id="ovTrips"></div></div>
         <div class="panel"><h2>Where it goes <span class="aside" id="ovDonutLabel"></span></h2><div id="ovDonut" style="display:flex;align-items:center;gap:18px;flex-wrap:wrap"></div></div>
@@ -273,6 +288,21 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--surface-2)}
       </div>
       <div class="panel" style="margin-bottom:14px"><h2>By category <span class="aside">select one to look closer</span></h2><div id="anCats"></div></div>
       <div class="panel" id="anDrill" hidden></div>
+    </section>
+
+    <!-- PATTERNS -->
+    <section class="page" id="p-patterns">
+      <div class="ph"><div><h1>Shopping Patterns</h1><p>When you shop, and whether timing changes what you spend.</p></div></div>
+      <div class="grid g4" id="ptKpis" style="margin-bottom:14px"></div>
+      <div class="grid g-wide" style="margin-bottom:14px">
+        <div class="panel"><h2>When you shop <span class="aside">trips by day and time</span></h2><div id="ptHeat" class="tablewrap"></div></div>
+        <div class="panel"><h2>What it tells you</h2><div id="ptInsights"></div></div>
+      </div>
+      <div class="grid g2">
+        <div class="panel"><h2>Average basket by day</h2><div id="ptDays"></div></div>
+        <div class="panel"><h2>Average basket by time of day</h2><div id="ptTimes"></div></div>
+      </div>
+      <p class="muted" id="ptNote" style="font-size:13px;margin:12px 2px 0"></p>
     </section>
 
     <!-- REPORTS -->
