@@ -73,7 +73,7 @@ Rules:
 - "category" must be one of: {", ".join(CATEGORIES)}.
 - Small fees are purchases too: include reusable bags (e.g. "REUBL SHRT PC" under OTHER SERVICES), deposits and eco fees.
 - Skip lines whose amount is 0.00, and skip subtotal, tax, total, payment and card lines.
-- "date": take it from the printed 4-digit-year date such as 2026/10/18, not from the 2-digit "DateTime" line.
+- "date": take it from the printed 4-digit-year date such as 2026/10/18 if there is one. On No Frills receipts the "DateTime" line is YY/MM/DD, so 26/09/23 means 2026-09-23 (year 2026, September, day 23), never 2023.
 - "time": the checkout time printed on the receipt, as 24-hour HH:MM (e.g. 16:52), or null if none is printed.
 - Ignore faint mirrored text showing through from the back of the paper.
 - "tax" is the total sales tax (HST/GST/PST). Write numbers without $ signs. Use null if something is not printed."""
@@ -142,6 +142,23 @@ def _num(value):
         return None
 
 
+def fix_swapped_date(iso):
+    """A YY/MM/DD date like 26/09/23 misread as 2023-09-26: swap day and year when that gives a recent date."""
+    d = dt.date.fromisoformat(iso)
+    today = dt.date.today()
+    recent = lambda x: -2 <= (today - x).days <= 400
+    if recent(d):
+        return iso
+    if 20 <= d.day <= 40 and 1 <= d.year % 100 <= 31:
+        try:
+            swapped = dt.date(2000 + d.day, d.month, d.year % 100)
+            if recent(swapped):
+                return swapped.isoformat()
+        except ValueError:
+            pass
+    return iso
+
+
 def to_receipt(text):
     """Turn the model's JSON answer into the structure the rest of the app uses."""
     cleaned = re.sub(r"```(?:json)?", "", text)
@@ -173,7 +190,7 @@ def to_receipt(text):
                       "department": dept, "category": cat})
 
     try:
-        receipt_date = dt.date.fromisoformat(str(data.get("date"))).isoformat()
+        receipt_date = fix_swapped_date(dt.date.fromisoformat(str(data.get("date"))).isoformat())
     except ValueError:
         receipt_date = None
     raw_store = str(data.get("store") or "").strip()

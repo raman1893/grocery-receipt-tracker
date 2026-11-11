@@ -225,7 +225,7 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--surface-2)}
         <button class="btn primary" id="bpSave">Save budget</button><button class="btn" id="bpClear">No budget</button></div>
       </div>
       <div class="grid g-wide" style="margin-bottom:14px">
-        <div class="panel"><h2>Spend per trip <span class="aside">last 6 trips</span></h2><div id="ovTrips"></div></div>
+        <div class="panel"><h2>Month by month <span class="aside">last 6 months</span></h2><div id="ovTrips"></div></div>
         <div class="panel"><h2>Where it goes <span class="aside" id="ovDonutLabel"></span></h2><div id="ovDonut" style="display:flex;align-items:center;gap:18px;flex-wrap:wrap"></div></div>
       </div>
       <div class="grid g-wide" style="margin-bottom:14px">
@@ -334,8 +334,9 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--surface-2)}
     <!-- PANTRY -->
     <section class="page" id="p-pantry">
       <div class="ph"><div><h1>Pantry</h1><p>What you’re likely to run out of, based on how often you buy it.</p></div></div>
-      <div class="panel" style="margin-bottom:14px"><h2>Running low soon</h2><div class="grid g4" id="pantryDue"></div></div>
-      <div class="panel"><h2>Still learning <span class="aside">predictions start after 2 purchases</span></h2><div id="pantryLearning" class="muted"></div></div>
+      <div class="panel" style="margin-bottom:14px"><h2>Running low soon <span class="aside">next 7 days</span></h2><div class="grid g4" id="pantryDue"></div></div>
+      <div class="panel" style="margin-bottom:14px"><h2>Coming up later</h2><div class="grid g4" id="pantryLater"></div></div>
+      <div class="panel"><h2>Still learning <span class="aside">predictions start after 2 purchases on different days</span></h2><div id="pantryLearning" class="muted"></div></div>
     </section>
 
     <!-- OPTIONS -->

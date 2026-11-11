@@ -71,6 +71,21 @@ function stackedSVG(monthsData){ // [{label, parts:[[cat, amt]]}]
   });
   return `<svg viewBox="0 0 ${W} ${h}" width="100%" role="img" aria-label="Spending by month">${out}</svg>`;
 }
+function monthBarsSVG(items, selected, budget){
+  const W = 520, h = 200, top = 26, bottom = 30, ih = h - top - bottom;
+  const max = Math.max(budget || 0, ...items.map(x => x.value)) * 1.12 || 1;
+  const slot = (W - 44) / items.length, bw = Math.min(56, slot * 0.55);
+  let out = [0, max / 2, max].map(t => { const y = top + ih - (t / max) * ih;
+    return `<line x1="40" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)" ${t ? 'stroke-dasharray="3 4"' : ''}/><text x="34" y="${y + 4}" text-anchor="end" fill="var(--muted)" font-size="11">${money0(t)}</text>`; }).join("");
+  items.forEach((x, i) => { const bh = (x.value / max) * ih, cx = 44 + slot * i + slot / 2, on = x.m === selected;
+    const over = budget && x.value > budget;
+    out += `<rect x="${cx - bw / 2}" y="${top + ih - bh}" width="${bw}" height="${bh}" rx="7" fill="${over ? "#D29A45" : on ? "#2F7A3B" : "#9ECB8A"}"><title>${esc(x.label)}: ${money(x.value)}</title></rect>` +
+      `<text x="${cx}" y="${top + ih - bh - 7}" text-anchor="middle" font-size="12" font-weight="${on ? 700 : 600}" fill="var(--ink)" class="num">${money(x.value)}</text>` +
+      `<text x="${cx}" y="${h - 10}" text-anchor="middle" font-size="12" fill="${on ? "var(--ink)" : "var(--muted)"}" font-weight="${on ? 600 : 400}">${esc(x.label)}</text>`; });
+  if (budget){ const y = top + ih - (budget / max) * ih;
+    out += `<line x1="40" x2="${W}" y1="${y}" y2="${y}" stroke="#B7791F" stroke-width="1.6" stroke-dasharray="6 4"/><text x="${W}" y="${y - 5}" text-anchor="end" font-size="11" fill="#B7791F">budget ${money0(budget)}</text>`; }
+  return `<svg viewBox="0 0 ${W} ${h}" width="100%" role="img" aria-label="Spending by month">${out}</svg>`;
+}
 function donutHTML(parts){
   if (!parts.length) return '<div class="empty">No receipts this month.</div>';
   const tot = sum(parts, p => p[1]), C = 2*Math.PI*40; let off = 0;
@@ -108,9 +123,11 @@ function priceChanges(){
     .map(([n, a]) => { a.sort((x, y) => x.date.localeCompare(y.date));
       const f = a[0].unit_price, l = a[a.length-1].unit_price; return {name:n, first:f, last:l, from:a[0].date, change:f ? l/f - 1 : 0, count:a.length}; });
 }
-function gapDays(){
+const medianOf = a => { const s = [...a].sort((x, y) => x - y), m = s.length; return m ? (m % 2 ? s[(m - 1) / 2] : (s[m / 2 - 1] + s[m / 2]) / 2) : null; };
+const gapsOf = ds => ds.slice(1).map((x, i) => (d(x) - d(ds[i])) / 864e5);
+function gapDays(){   // typical days between trips: the median gap, so one odd trip can't skew it
   const ds = [...new Set(RECEIPTS.map(r => r.date))].sort(); if (ds.length < 2) return null;
-  return Math.round((d(ds[ds.length-1]) - d(ds[0])) / 864e5 / (ds.length - 1));
+  return Math.max(1, Math.round(medianOf(gapsOf(ds))));
 }
 const title = s => s.toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase());
 
@@ -141,9 +158,9 @@ function renderOverview(){
     bchip.title = "Set your monthly grocery budget";
     bchip.onclick = openBudget; bchip.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openBudget(); } }; }
 
-  const last6 = [...RECEIPTS].sort((a, b) => a.date.localeCompare(b.date)).slice(-6);
+  const last6 = ms.slice(-6).map(m => ({label: monthName(m).replace(/ 20(\d\d)$/, " ’$1"), value: sum(RECEIPTS.filter(r => monthKey(r.date) === m), total), m}));
   const shades = ["#C3E0B5","#9ECB8A","#78B464","#559A43","#3C8231","#2F6B27"].slice(-last6.length);
-  document.getElementById("ovTrips").innerHTML = barsSVG(last6, {label: r => fmt(r.date), value: total, color: (x, i) => shades[i]});
+  document.getElementById("ovTrips").innerHTML = monthBarsSVG(last6, keep, BUDGET);
   document.getElementById("ovDonutLabel").textContent = monthName(keep);
   document.getElementById("ovDonut").innerHTML = donutHTML(byCat(lines().filter(l => monthKey(l.date) === keep)));
 
@@ -368,20 +385,30 @@ document.getElementById("qRun").addEventListener("click", runSQL);
 
 // ---------- PANTRY ----------
 function renderPantry(){
-  const by = {}; lines().filter(l => !["Tax","Other"].includes(l.category)).forEach(l => (by[l.name] = by[l.name] || {cat:l.category, dates:new Set()}).dates.add(l.date));
-  const today = new Date(), due = [], learning = [];
+  // An item gets a prediction once it's bought on 2+ different days. Its rhythm is the typical (median)
+  // gap between purchases; days left = last purchase + rhythm - today.
+  const by = {}; lines().filter(l => !["Tax","Other","Household"].includes(l.category))
+    .forEach(l => (by[l.name] = by[l.name] || {cat: l.category, dates: new Set()}).dates.add(l.date));
+  const today = new Date(new Date().toDateString()), soon = [], later = [], learning = [], rare = [];
   Object.entries(by).forEach(([n, o]) => { const ds = [...o.dates].sort();
     if (ds.length < 2){ learning.push(title(n)); return; }
-    const gap = (d(ds[ds.length-1]) - d(ds[0])) / 864e5 / (ds.length - 1), next = new Date(d(ds[ds.length-1]).getTime() + gap*864e5);
-    const left = Math.round((next - today) / 864e5);
-    due.push({n, cat:o.cat, gap:Math.round(gap), last:ds[ds.length-1], left}); });
-  due.sort((a, b) => a.left - b.left);
-  document.getElementById("pantryDue").innerHTML = due.length ? due.map(p => `<div class="pantry-card ${p.left <= 2 ? "due" : ""}">
+    const gap = medianOf(gapsOf(ds));
+    if (gap > 90){ rare.push(title(n)); return; }                 // months apart: not a real rhythm yet
+    const last = ds[ds.length - 1], left = Math.round((d(last).getTime() + gap * 864e5 - today) / 864e5);
+    (left <= 7 ? soon : later).push({n, cat: o.cat, gap: Math.round(gap), last, left, times: ds.length}); });
+  const card = p => `<div class="pantry-card ${p.left <= 2 ? "due" : ""}">
       <div class="pi" style="color:${cc(p.cat)}">${ci(p.cat)}</div><b>${esc(title(p.n))}</b>
-      <div class="${p.left <= 2 ? "" : "muted"}" style="${p.left <= 2 ? "color:var(--amber-text);font-weight:600" : ""}">${p.left < 0 ? `Probably out ${-p.left} day${p.left === -1 ? "" : "s"} ago` : p.left === 0 ? "Likely out today" : `About ${p.left} day${p.left === 1 ? "" : "s"} left`}</div>
-      <div class="muted" style="font-size:13px;margin-top:6px">Usually every ${p.gap} days, last bought ${fmt(p.last)}</div></div>`).join("")
-    : '<div class="empty" style="grid-column:1/-1">Buy the same item twice and it shows up here.</div>';
-  document.getElementById("pantryLearning").textContent = learning.length ? learning.join(", ") + ": bought once so far." : "Nothing left to learn.";
+      <div class="${p.left <= 2 ? "" : "muted"}" style="${p.left <= 2 ? "color:var(--amber-text);font-weight:600" : ""}">${p.left < 0 ? `Probably ran out ${-p.left} day${p.left === -1 ? "" : "s"} ago` : p.left === 0 ? "Likely out today" : `About ${p.left} day${p.left === 1 ? "" : "s"} left`}</div>
+      <div class="muted" style="font-size:13px;margin-top:6px">Every ~${p.gap} days (${p.times} buys), last ${fmt(p.last)}</div></div>`;
+  soon.sort((a, b) => a.left - b.left); later.sort((a, b) => a.left - b.left);
+  document.getElementById("pantryDue").innerHTML = soon.length ? soon.map(card).join("")
+    : '<div class="empty" style="grid-column:1/-1">Nothing due in the next week.</div>';
+  document.getElementById("pantryLater").innerHTML = later.length ? later.map(card).join("")
+    : '<div class="empty" style="grid-column:1/-1">Items bought regularly show up here.</div>';
+  const notes = [];
+  if (learning.length) notes.push(learning.join(", ") + ": bought once so far.");
+  if (rare.length) notes.push(rare.join(", ") + ": bought months apart, so no prediction yet.");
+  document.getElementById("pantryLearning").textContent = notes.join(" ") || "Nothing left to learn.";
 }
 
 // ---------- OPTIONS ----------
