@@ -28,6 +28,17 @@ function lines(){ // flatten to one row per line, tax included as its own line
   return out;
 }
 const total = r => r.subtotal + r.tax;
+const paidOf = r => sum(r.items) + r.tax;
+function duplicateFlags(){   // receipt id -> the earlier receipt it repeats (same store and day, total within $1)
+  const flags = {}, seen = {};
+  [...RECEIPTS].sort((a, b) => a.id.localeCompare(b.id)).forEach(r => {
+    const key = r.date + "|" + r.store, p = paidOf(r);
+    const twin = (seen[key] || []).find(o => Math.abs(paidOf(o) - p) <= 1);
+    if (twin) flags[r.id] = {of: twin, exact: Math.abs(paidOf(twin) - p) < 0.01};
+    (seen[key] = seen[key] || []).push(r);
+  });
+  return flags;
+}
 const sum = (a, f = x => x.amount) => a.reduce((s, x) => s + f(x), 0);
 const months = () => [...new Set(RECEIPTS.map(r => monthKey(r.date)))].sort();
 function byCat(rows){ const m = {}; rows.forEach(r => m[r.category] = (m[r.category]||0) + r.amount);
@@ -164,10 +175,11 @@ function renderOverview(){
   document.getElementById("ovDonutLabel").textContent = monthName(keep);
   document.getElementById("ovDonut").innerHTML = donutHTML(byCat(lines().filter(l => monthKey(l.date) === keep)));
 
+  const DUPS = duplicateFlags();
   const recent = [...RECEIPTS].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 4);
   document.getElementById("ovRecent").innerHTML = `<table><thead><tr><th>Date</th><th>Store</th><th class="right">Items</th><th class="right">Total</th><th>Check</th></tr></thead><tbody>` +
     recent.map(r => { const ok = Math.abs(sum(r.items) - r.subtotal) < .01;
-      const chip = !r.printed ? '<span class="chip plain">Saved</span>' : ok ? '<span class="chip good">Matched</span>' : '<span class="chip warn">Check items</span>';
+      const chip = DUPS[r.id] ? '<span class="chip bad">Duplicate?</span>' : !r.printed ? '<span class="chip plain">Saved</span>' : ok ? '<span class="chip good">Matched</span>' : '<span class="chip warn">Check items</span>';
       return `<tr><td>${fmt(r.date)}${r.time ? `<span class="muted">, ${niceTime(r.time)}</span>` : ""}</td><td>${esc(r.store)}</td><td class="right num">${r.items.length}</td><td class="right num">${money(total(r))}</td><td>${chip}</td></tr>`; }).join("") + `</tbody></table>`;
 
   const ins = [], up = priceChanges().filter(p => p.change > .005).sort((a, b) => b.change - a.change)[0];
@@ -329,8 +341,13 @@ function renderReports(){
   document.getElementById("repTable").innerHTML = rows.length ? `<table><thead><tr><th>Date</th><th>Store</th><th>Item</th><th class="right">Qty</th><th class="right">Unit price</th><th class="right">Amount</th><th>Category</th></tr></thead><tbody>${
     rows.map(l => `<tr><td>${fmt(l.date, {day:"numeric",month:"short",year:"numeric"})}</td><td>${esc(l.store)}</td><td>${esc(title(l.name))}</td><td class="right num">${l.qty}${l.unit === "kg" ? " kg" : ""}</td><td class="right num">${money(l.unit_price)}</td><td class="right num">${money(l.amount)}</td><td>${esc(l.category)}</td></tr>`).join("")}</tbody></table>`
     : '<div class="empty">No lines match that search.</div>';
-  document.getElementById("delList").innerHTML = [...RECEIPTS].sort((a, b) => b.date.localeCompare(a.date)).map(r =>
-    `<label class="check"><input type="checkbox" value="${r.id}" class="delPick"><span>${fmt(r.date, {day:"numeric",month:"short",year:"numeric"})}, ${esc(r.store)}</span><span class="num" style="margin-left:auto">${money(total(r))}</span></label>`).join("") || '<div class="empty">No receipts.</div>';
+  const dups = duplicateFlags(), nd = Object.keys(dups).length;
+  document.getElementById("dupBanner").innerHTML = nd ? `<div class="status warn" style="margin-bottom:10px">${IC.warn}<div><b>${nd} receipt${nd === 1 ? " looks" : "s look"} like ${nd === 1 ? "a duplicate" : "duplicates"}</b> of one already saved (same store and day, same total). <button class="btn" id="dupSelect" style="margin-top:8px">Select duplicates</button></div></div>` : "";
+  document.getElementById("delList").innerHTML = [...RECEIPTS].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)).map(r =>
+    `<label class="check"><input type="checkbox" value="${r.id}" class="delPick"><span>${fmt(r.date, {day:"numeric",month:"short",year:"numeric"})}, ${esc(r.store)}${r.time ? `<span class="muted">, ${niceTime(r.time)}</span>` : ""}</span>${dups[r.id] ? `<span class="chip ${dups[r.id].exact ? "bad" : "warn"}" style="margin-left:8px">${dups[r.id].exact ? "Duplicate" : "Possible duplicate"}</span>` : ""}<span class="num" style="margin-left:auto">${money(total(r))}</span></label>`).join("") || '<div class="empty">No receipts.</div>';
+  const ds = document.getElementById("dupSelect");
+  if (ds) ds.onclick = () => { document.querySelectorAll(".delPick").forEach(c => c.checked = !!dups[c.value]);
+    toast("Ticked the extra copies. Check them, then press Delete selected."); };
   document.getElementById("selAll").checked = false;
   document.getElementById("delConfirm").classList.remove("show");
 }

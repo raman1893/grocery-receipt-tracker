@@ -37,12 +37,18 @@ df["receipt_id"] = df["receipt_id"].astype(str)
 df["receipt_date"] = df["receipt_date"].astype(str).str[:10]
 existing = {r[0] for r in app.db_rows("SELECT DISTINCT receipt_id FROM expenses")}
 new = df[~df["receipt_id"].isin(existing)]
+# also skip receipts already saved under another id (same store, date and total), e.g. scanned in another session
+dupes = [rid for rid, g in new.groupby("receipt_id")
+         if app.is_duplicate(g["receipt_date"].iloc[0], g["store"].iloc[0], round(float(g["amount"].sum()), 2))]
+new = new[~new["receipt_id"].isin(dupes)]
 if new.empty:
-    print(f"Nothing to copy: all {df['receipt_id'].nunique()} receipts are already in Neon.")
+    print(f"Nothing to copy: all {df['receipt_id'].nunique()} receipts are already in Neon"
+          + (f" ({len(dupes)} matched by store, date and total)." if dupes else "."))
     sys.exit(0)
 app.save_rows(new)
 if info is not None:
     for row in info[info["receipt_id"].astype(str).isin(new["receipt_id"])].itertuples():
         app.save_receipt_info(str(row.receipt_id), row.subtotal, row.total)
 print(f"Copied {new['receipt_id'].nunique()} receipts ({len(new)} lines) into Neon. "
-      f"Skipped {df['receipt_id'].nunique() - new['receipt_id'].nunique()} already there.")
+      f"Skipped {df['receipt_id'].nunique() - new['receipt_id'].nunique()} already there"
+      + (f", {len(dupes)} of them matched by store, date and total." if dupes else "."))

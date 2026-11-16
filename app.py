@@ -329,6 +329,14 @@ def is_duplicate(receipt_date, store, amount):
     return any(abs(float(s or 0) - amount) < 0.01 for (s,) in rows)
 
 
+def similar_receipt(receipt_date, store, amount, tolerance=1.0):
+    """Total of an already-saved receipt from the same store and day within $1, else None."""
+    rows = db_rows("SELECT SUM(amount) FROM expenses WHERE receipt_date = :d AND store = :s GROUP BY receipt_id",
+                   d=receipt_date, s=store)
+    close = [float(s or 0) for (s,) in rows if abs(float(s or 0) - amount) <= tolerance]
+    return close[0] if close else None
+
+
 def save_rows(df):
     with get_engine().begin() as c:
         df[COLUMNS].to_sql("expenses", c, if_exists="append", index=False)
@@ -775,6 +783,7 @@ def process_receipt(image, date_override="", store_override=""):
                 "message": f"**Already saved.** A {store} receipt from {nice_date(receipt_date)} "
                            f"for ${paid:,.2f} is in your records, so nothing new was added."}
 
+    near = similar_receipt(receipt_date, store, paid)
     df["receipt_id"] = dt.datetime.now().strftime("%Y%m%d%H%M%S%f")
     df["receipt_date"], df["store"] = receipt_date, store
     df["created_at"] = dt.datetime.now().isoformat(timespec="seconds")
@@ -796,6 +805,9 @@ def process_receipt(image, date_override="", store_override=""):
                     f"subtotal is ${r['subtotal']:,.2f}, so a line worth about ${abs(gap):,.2f} "
                     f"seems to be {'missing' if gap > 0 else 'extra or misread'}.")
     message += date_note
+    if near is not None:
+        message += (f"  \n**This looks like a receipt you've already saved** ({store}, {nice_date(receipt_date)}, "
+                    f"${near:,.2f}). If it's the same one, delete the extra copy in Reports.")
     return {**base, "kind": "saved", "matched": matched, "message": message,
             "receipt_id": df["receipt_id"].iloc[0]}
 
