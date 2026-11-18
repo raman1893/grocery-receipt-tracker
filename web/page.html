@@ -184,6 +184,90 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--surface-2)}
 .fa .heat div{height:34px;border-radius:7px;display:grid;place-items:center;font-variant-numeric:tabular-nums}
 .fa .heat .lab{background:none;color:var(--muted);justify-items:start;place-items:center start}
 .fa .heat .hd{background:none;color:var(--muted);height:22px}
+
+/* ---------- simple app (Home / Receipts / Settings) ---------- */
+.fa .nav .group{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:16px 12px 6px}
+.fa .hello{font-size:15px;color:var(--muted);margin:0 0 2px}
+.fa .hero{background:var(--leaf);color:var(--leaf-ink);border:none;border-radius:22px;padding:22px 22px 20px}
+.fa .hero .lab{opacity:.85;font-weight:500}
+.fa .hero .big{font-size:40px;font-weight:700;letter-spacing:-0.03em;margin:2px 0 12px;line-height:1.1}
+.fa .hero .meter{height:8px;border-radius:4px;background:rgba(255,255,255,.28);overflow:hidden;margin-bottom:8px}
+.fa .hero .meter i{display:block;height:100%;background:#fff;border-radius:4px}
+.fa .hero .meter i.over{background:#FFD38A}
+.fa .hero .foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:14px;opacity:.92}
+.fa .hero a,.fa .hero button.link{color:inherit;font-weight:600;text-decoration:underline;text-underline-offset:3px;background:none;border:none;padding:0;cursor:pointer}
+.fa .acts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:18px 0 22px;align-items:start}
+.fa .act{display:flex;flex-direction:column;align-items:center;gap:7px;text-decoration:none;color:var(--ink);font-size:13.5px;font-weight:500;background:none;border:none;cursor:pointer;padding:4px 0}
+.fa .act .o{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font-size:24px;background:var(--leaf-soft);color:var(--leaf-text)}
+.fa .act.hot .o{background:var(--leaf);color:var(--leaf-ink)}
+.fa .act:hover .o{filter:brightness(.96)}
+.fa .sec{display:flex;justify-content:space-between;align-items:baseline;margin:0 2px 10px}
+.fa .sec h2{margin:0;font-size:17px;font-weight:600}
+.fa .sec a{color:var(--leaf-text);text-decoration:none;font-weight:600;font-size:14px}
+.fa .list{background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.fa .row{display:flex;align-items:center;gap:12px;padding:12px 16px;border:none;border-bottom:1px solid var(--line);background:none;width:100%;text-align:left;cursor:pointer;color:inherit}
+.fa .row:last-child{border-bottom:none}
+.fa .row:hover,.fa .row.sel{background:var(--surface-2)}
+.fa .av{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:16px;color:#fff;flex:none}
+.fa .row .t{flex:1;min-width:0}
+.fa .row .t b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fa .row .t span{font-size:13px;color:var(--muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fa .row .amt{font-weight:600;text-align:right;white-space:nowrap}
+.fa .row .amt .chip{display:block;margin-top:3px;width:max-content;margin-left:auto}
+.fa .mhead{font-size:13px;font-weight:600;color:var(--muted);padding:16px 4px 8px;text-transform:uppercase;letter-spacing:.05em}
+.fa .cbar{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line)}
+.fa .cbar:last-child{border-bottom:none}
+.fa .cbar .ci{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:18px}
+.fa .cbar .nm{display:flex;justify-content:space-between;font-size:14.5px;margin-bottom:6px}
+.fa .home-wrap{max-width:620px}
+.fa .rc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:18px;align-items:start}
+.fa .rc .detail{position:sticky;top:20px}
+.fa .detail .dh{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+.fa .detail .tot{font-size:34px;font-weight:700;letter-spacing:-0.02em;margin:10px 0 2px}
+.fa .detail .meta{color:var(--muted);font-size:14px}
+.fa .detail .il{margin:14px 0}
+.fa .detail .il div{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14.5px}
+.fa .detail .il small{display:block;color:var(--muted);font-size:12.5px}
+.fa .detail .sumr{display:flex;justify-content:space-between;padding:4px 0;font-size:14.5px}
+.fa .back{display:none}
+.fa .setlist .srow{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:16px 18px;border-bottom:1px solid var(--line)}
+.fa .setlist .srow:last-child{border-bottom:none}
+.fa .setlist .srow b{display:block;font-weight:600}
+.fa .setlist .srow span.muted{font-size:13.5px}
+.fa .switch{position:relative;width:48px;height:28px;flex:none}
+.fa .switch input{opacity:0;width:100%;height:100%;margin:0;position:absolute;cursor:pointer;z-index:1}
+.fa .switch i{position:absolute;inset:0;border-radius:14px;background:var(--line);transition:.2s}
+.fa .switch i::after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.fa .switch input:checked+i{background:var(--leaf)}
+.fa .switch input:checked+i::after{transform:translateX(20px)}
+.fa .modal{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;padding:16px}
+.fa .modal[hidden]{display:none}
+.fa .modal .sheet{background:var(--surface);border-radius:22px;padding:22px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.fa .modal h2{margin:0 0 6px;font-size:19px;display:flex;justify-content:space-between;align-items:center}
+.fa .modal .qbtns .btn{flex:1;justify-content:center}
+.fa .tabbar{display:none}
+.fa .scanlink{display:block;margin-top:12px;color:var(--leaf-text);font-weight:600;text-decoration:none}
+@media (max-width: 860px){
+  .fa .side{display:none}
+  .fa #menuBtn{display:none}
+  .fa .topbar{justify-content:center;border-bottom:none;background:var(--bg)}
+  .fa .main{padding:6px 16px calc(96px + env(safe-area-inset-bottom,0px))}
+  .fa .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:35;background:var(--surface);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));justify-content:space-around}
+  .fa .tabbar a{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;color:var(--muted);text-decoration:none;font-size:12px;font-weight:500}
+  .fa .tabbar a svg{font-size:23px}
+  .fa .tabbar a .pill{padding:3px 18px;border-radius:14px}
+  .fa .tabbar a[aria-current="page"]{color:var(--leaf-text);font-weight:600}
+  .fa .tabbar a[aria-current="page"] .pill{background:var(--leaf-soft)}
+  .fa .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+  .fa .rc{grid-template-columns:1fr}
+  .fa .rc .detail{position:static}
+  .fa .rc.open .listcol{display:none}
+  .fa .rc:not(.open) .detail{display:none}
+  .fa .back{display:inline-flex;margin-bottom:12px}
+  .fa .hero .big{font-size:36px}
+  .fa .modal{align-items:flex-end;padding:0}
+  .fa .modal .sheet{border-radius:22px 22px 0 0;max-width:none;padding-bottom:calc(22px + env(safe-area-inset-bottom,0px))}
+}
 </style>
 <div class="topbar">
   <button class="btn" id="menuBtn" aria-label="Open menu" aria-expanded="false" style="padding:8px"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M4 6l16 0"></path><path d="M4 12l16 0"></path><path d="M4 18l16 0"></path></svg></button>
@@ -193,46 +277,90 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--surface-2)}
   <aside class="side" id="side" aria-label="Main">
     <div class="brand"><span class="mark"><svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="20" cy="20" r="20" fill="#EEF6EA"/><ellipse cx="20" cy="34.2" rx="15" ry="3.1" fill="#7DBB55"/><ellipse cx="20" cy="33.7" rx="7.6" ry="1.7" fill="#5C9A3D"/><path d="M20.4 33.6V21.5" stroke="#6B4A2E" stroke-width="2.4" stroke-linecap="round"/><path d="M20.4 24.5l-3.6-3.2M20.4 23.4l3.4-2.9" stroke="#6B4A2E" stroke-width="1.3" stroke-linecap="round" fill="none"/><g fill="#3F8A2E"><circle cx="12.4" cy="17.8" r="5.4"/><circle cx="28" cy="17.4" r="5.6"/><circle cx="20.2" cy="20.6" r="6"/></g><g fill="#5FA83E"><circle cx="14" cy="12.6" r="5.8"/><circle cx="26" cy="12.4" r="5.8"/><circle cx="20" cy="8.6" r="6.2"/><circle cx="20" cy="15.6" r="7"/></g><g fill="#8CC84B"><circle cx="17.4" cy="8.4" r="2.8"/><circle cx="12.6" cy="12.4" r="2.2"/><circle cx="23.4" cy="11.2" r="2.4"/></g></svg></span><span>Fresh<b>Analytics</b></span></div>
     <nav class="nav" id="nav">
-      <a href="#overview" data-page="overview"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1"></path><path d="M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"></path><path d="M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1"></path><path d="M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"></path></svg>Overview</a>
+      <a href="#home" data-page="home"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 12l-2 0l9 -9l9 9l-2 0"></path><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"></path><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"></path></svg>Home</a>
       <a href="#scan" data-page="scan"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"></path><path d="M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"></path></svg>Scan</a>
-      <a href="#upload" data-page="upload"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M15 8h.01"></path><path d="M12.5 21h-6.5a3 3 0 0 1 -3 -3v-12a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v6.5"></path><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l4 4"></path><path d="M14 14l1 -1c.67 -.644 1.45 -.824 2.182 -.54"></path><path d="M16 19h6"></path><path d="M19 16v6"></path></svg>Upload several</a>
-      <a href="#analytics" data-page="analytics"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M10 3.2a9 9 0 1 0 10.8 10.8a1 1 0 0 0 -1 -1h-3.8a4.1 4.1 0 1 1 -5 -5v-4a.9 .9 0 0 0 -1 -.8"></path><path d="M15 3.5a9 9 0 0 1 5.5 5.5h-4.5a9 9 0 0 0 -1 -1v-4.5"></path></svg>Spend Analytics</a>
-      <a href="#patterns" data-page="patterns"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4"></path><path d="M18 14v4h4"></path><path d="M14 18a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"></path><path d="M15 3v4"></path><path d="M7 3v4"></path><path d="M3 11h16"></path></svg>Shopping Patterns</a>
-      <a href="#reports" data-page="reports"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M14 3v4a1 1 0 0 0 1 1h4"></path><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2"></path><path d="M9 9l1 0"></path><path d="M9 13l6 0"></path><path d="M9 17l6 0"></path></svg>Reports</a>
-      <a href="#pantry" data-page="pantry"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 5a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2l0 -14"></path><path d="M5 10h14"></path><path d="M9 13v3"></path><path d="M9 6v1"></path></svg>Pantry</a>
-    </nav>
-    <div class="spacer"></div>
-    <nav class="nav foot">
-      <a href="#options" data-page="options"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M12 6a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path><path d="M4 6l8 0"></path><path d="M16 6l4 0"></path><path d="M6 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path><path d="M4 12l2 0"></path><path d="M10 12l10 0"></path><path d="M15 18a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path><path d="M4 18l11 0"></path><path d="M19 18l1 0"></path></svg>Options</a>
+      <a href="#receipts" data-page="receipts"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16l-3 -2l-2 2l-2 -2l-2 2l-2 -2l-3 2m4 -14h6m-6 4h6m-2 4h2"></path></svg>Receipts</a>
+      <a href="#settings" data-page="settings"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M12 6a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path><path d="M4 6l8 0"></path><path d="M16 6l4 0"></path><path d="M6 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path><path d="M4 12l2 0"></path><path d="M10 12l10 0"></path><path d="M15 18a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path><path d="M4 18l11 0"></path><path d="M19 18l1 0"></path></svg>Settings</a>
+      <div id="navMore" hidden>
+        <div class="group">More</div>
+        <a href="#overview" data-page="overview"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1"></path><path d="M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"></path><path d="M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1"></path><path d="M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"></path></svg>Dashboard</a>
+        <a href="#analytics" data-page="analytics"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M10 3.2a9 9 0 1 0 10.8 10.8a1 1 0 0 0 -1 -1h-3.8a4.1 4.1 0 1 1 -5 -5v-4a.9 .9 0 0 0 -1 -.8"></path><path d="M15 3.5a9 9 0 0 1 5.5 5.5h-4.5a9 9 0 0 0 -1 -1v-4.5"></path></svg>Spend Analytics</a>
+        <a href="#patterns" data-page="patterns"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4"></path><path d="M18 14v4h4"></path><path d="M14 18a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"></path><path d="M15 3v4"></path><path d="M7 3v4"></path><path d="M3 11h16"></path></svg>Shopping Patterns</a>
+        <a href="#pantry" data-page="pantry"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 5a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2l0 -14"></path><path d="M5 10h14"></path><path d="M9 13v3"></path><path d="M9 6v1"></path></svg>Pantry</a>
+        <a href="#reports" data-page="reports"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M14 3v4a1 1 0 0 0 1 1h4"></path><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2"></path><path d="M9 9l1 0"></path><path d="M9 13l6 0"></path><path d="M9 17l6 0"></path></svg>Reports &amp; SQL</a>
+      </div>
     </nav>
   </aside>
 
   <main class="main" id="main"><div class="loading" id="faLoading">Loading your receipts…</div>
-    <!-- OVERVIEW -->
+    <!-- HOME -->
+    <section class="page" id="p-home"><div class="home-wrap">
+      <p class="hello" id="hmHello">Hello</p>
+      <div class="hero" id="hmHero"></div>
+      <div class="acts">
+        <a class="act hot" href="#scan"><span class="o"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"></path><path d="M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"></path></svg></span>Scan</a>
+        <a class="act" href="#upload"><span class="o"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M7 18a4.6 4.4 0 0 1 0 -9a5 4.5 0 0 1 11 2h1a3.5 3.5 0 0 1 0 7h-1"></path><path d="M9 15l3 -3l3 3"></path><path d="M12 12l0 9"></path></svg></span>Upload</a>
+        <button class="act" id="hmBudget" type="button"><span class="o"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"></path><path d="M12 12m-5 0a5 5 0 1 0 10 0a5 5 0 1 0 -10 0"></path><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"></path></svg></span>Budget</button>
+        <a class="act" href="#receipts"><span class="o"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16l-3 -2l-2 2l-2 -2l-2 2l-2 -2l-3 2m4 -14h6m-6 4h6m-2 4h2"></path></svg></span>Receipts</a>
+      </div>
+      <div class="sec"><h2>This month by category</h2></div>
+      <div class="list" id="hmCats" style="margin-bottom:22px"></div>
+      <div class="sec"><h2>Recent receipts</h2><a href="#receipts">See all</a></div>
+      <div class="list" id="hmRecent"></div>
+    </div></section>
+
+    <!-- RECEIPTS -->
+    <section class="page" id="p-receipts">
+      <div class="ph"><div><h1>Receipts</h1><p id="rcCount"></p></div>
+        <div class="ctrls"><button class="btn" id="rcExport"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"></path><path d="M7 11l5 5l5 -5"></path><path d="M12 4l0 12"></path></svg>Excel</button></div></div>
+      <div class="rc" id="rcWrap">
+        <div class="listcol">
+          <div class="search" style="max-width:none;margin-bottom:12px"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"></path><path d="M21 21l-6 -6"></path></svg><input id="rcSearch" placeholder="Search stores or items" aria-label="Search receipts"></div>
+          <div id="rcDup"></div>
+          <div id="rcList"></div>
+        </div>
+        <div class="detail panel" id="rcDetail"></div>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="page" id="p-settings"><div class="home-wrap">
+      <div class="ph"><div><h1>Settings</h1></div></div>
+      <div class="list setlist" style="margin-bottom:16px">
+        <div class="srow"><div><b>Monthly grocery budget</b><span class="muted" id="stBudgetNote"></span></div><button class="btn" id="stBudget">Set</button></div>
+        <div class="srow"><div><b>Where receipts are saved</b><span class="muted" id="storageNote">Checking…</span></div></div>
+        <div class="srow"><div><b>Download everything</b><span class="muted">Every line of every receipt, as an Excel file</span></div><button class="btn" id="stExport"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"></path><path d="M7 11l5 5l5 -5"></path><path d="M12 4l0 12"></path></svg>Excel</button></div>
+        <div class="srow"><div><b>Show more pages</b><span class="muted">Dashboard, spend analytics, shopping patterns, pantry and SQL</span></div><label class="switch"><input type="checkbox" id="stMore" aria-label="Show more pages"><i></i></label></div>
+      </div>
+      <div class="panel"><h2>Open on your phone</h2>
+        <p class="muted" style="margin-top:0">Point your phone’s camera at this code.</p>
+        <div id="qr"></div>
+        <p class="muted num" id="qrUrl" style="word-break:break-all;font-size:13px"></p>
+      </div>
+      <div class="panel" id="stCats" hidden style="margin-top:16px"><h2>Category budgets <span class="aside">used on the Dashboard</span></h2>
+        <div id="catBudgets"></div>
+        <button class="btn primary" id="saveBudgets">Save category budgets</button>
+      </div>
+    </div></section>
+
+    <!-- OVERVIEW (Dashboard, under More) -->
     <section class="page" id="p-overview">
       <div class="panel welcome" style="margin-bottom:14px">
-        <div><h1 style="margin:0;font-size:28px;font-weight:700;letter-spacing:-0.02em">Overview</h1>
+        <div><h1 style="margin:0;font-size:28px;font-weight:700;letter-spacing:-0.02em">Dashboard</h1>
           <p class="muted" style="margin:4px 0 0">Your grocery spending at a glance.</p></div>
         <div class="orbit" aria-hidden="true" title="Fresh from Canadian farms"><div class="ring"><span class="slot" style="--a:0deg"><span class="fruit"><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M16 9c-2-1.6-5.4-2-7.6.2-2.6 2.6-2.4 7.6.2 12.2 1.8 3.2 4 5 6 4.4.7-.2 1-.5 1.4-.5s.7.3 1.4.5c2 .6 4.2-1.2 6-4.4 2.6-4.6 2.8-9.6.2-12.2C21.4 7 18 7.4 16 9z" fill="#D9473F"/><path d="M11 12.4c-1 1.2-1.4 3-1 4.6" stroke="#F3A39C" stroke-width="1.6" stroke-linecap="round" fill="none"/><path d="M16 9.4c0-2 .6-3.6 1.8-4.8" stroke="#6B4A2E" stroke-width="1.6" stroke-linecap="round" fill="none"/><path d="M17.6 6.2c1.8-1.6 4.4-1.6 5.6-.6-1.2 1.6-3.6 2.2-5.6.6z" fill="#5FA83E"/></svg></span></span><span class="slot" style="--a:72deg"><span class="fruit"><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M20.6 11.4c-2.4-2.4-6.2-1.4-7.6 1.6L6.4 26.6c-.4.8.4 1.6 1.2 1.2L21.2 21c3-1.4 4-5.2 1.6-7.6z" fill="#EE7A23"/><path d="M12.2 17.6l2 1.6M10.2 21.4l1.8 1.4M14.6 13.8l1.6 1.2" stroke="#C85A12" stroke-width="1.3" stroke-linecap="round"/><path d="M20.4 11.6c.4-3 2.2-5.4 4.8-6.4-.6 2.6-2.2 4.8-4.8 6.4zM21.6 12.6c2.4-1.6 5.4-1.8 7.4-.8-2 1.6-4.8 2-7.4.8zM20.2 11.2c-.8-2.6-.2-5.4 1.4-7.2.6 2.4-.2 5-1.4 7.2z" fill="#5FA83E"/></svg></span></span><span class="slot" style="--a:144deg"><span class="fruit"><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M16 4c3.4 0 5.4 4.4 5.4 10.6S19.4 27 16 27s-5.4-6.2-5.4-12.4S12.6 4 16 4z" fill="#F4C430"/><g stroke="#D9A20F" stroke-width="1" fill="none"><path d="M12 10h8M11.2 14h9.6M11.2 18h9.6M12 22h8"/><path d="M14 5.6v20.8M18 5.6v20.8"/></g><path d="M16 27c-2.6-1.4-5.2-5.6-5.8-10.4-1.6 4.4-1.4 9.6.8 12.4 1.6.6 3.4.2 5-2z" fill="#5FA83E"/><path d="M16 27c2.6-1.4 5.2-5.6 5.8-10.4 1.6 4.4 1.4 9.6-.8 12.4-1.6.6-3.4.2-5-2z" fill="#4E9234"/></svg></span></span><span class="slot" style="--a:216deg"><span class="fruit"><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M6.4 18.4c-1-4.6 2.4-9.6 8-10.6 5.4-1 10.6 1.4 11.4 5.8.8 4.6-2.2 9.4-7.8 10.4-5.6 1-10.6-1.2-11.6-5.6z" fill="#C8955A"/><path d="M9 14.6c1.2-2.4 3.6-4 6.2-4.4" stroke="#E0B886" stroke-width="1.6" stroke-linecap="round" fill="none"/><g fill="#9A6B37"><circle cx="12" cy="18" r="1"/><circle cx="17.6" cy="15" r=".9"/><circle cx="21.4" cy="18.6" r="1"/><circle cx="16" cy="20.8" r=".8"/></g></svg></span></span><span class="slot" style="--a:288deg"><span class="fruit"><svg aria-hidden="true" viewBox="0 0 32 32"><circle cx="11.4" cy="19.4" r="6" fill="#4A5FB0"/><circle cx="20.8" cy="20.6" r="5.4" fill="#3B4C96"/><circle cx="16.4" cy="11.6" r="5.2" fill="#5A70C4"/><g fill="#24305F"><circle cx="11.4" cy="19.4" r="1.5"/><circle cx="20.8" cy="20.6" r="1.4"/><circle cx="16.4" cy="11.6" r="1.4"/></g><g fill="#8C9BE0"><circle cx="11.4" cy="19.4" r=".6"/><circle cx="20.8" cy="20.6" r=".55"/><circle cx="16.4" cy="11.6" r=".55"/></g><path d="M18.4 6.4c1.4-1.2 3.4-1.4 4.6-.6-1.2 1.4-3.2 1.6-4.6.6z" fill="#5FA83E"/></svg></span></span></div><span class="cart"><svg aria-hidden="true" viewBox="0 0 48 48"><path d="M5 8h5.2l4.6 21.2a3 3 0 0 0 2.9 2.4h17.6a3 3 0 0 0 2.9-2.2L42 15H12.2" fill="none" stroke="#2F7A3B" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 22.5h24.6" stroke="#2F7A3B" stroke-width="2.4" stroke-linecap="round" opacity=".45"/><circle cx="19" cy="39" r="3.2" fill="#2F7A3B"/><circle cx="34" cy="39" r="3.2" fill="#2F7A3B"/></svg></span></div>
         <select class="select" id="ovMonth" aria-label="Month"></select>
       </div>
       <div class="grid g4" id="ovKpis" style="margin-bottom:14px"></div>
-      <div class="panel budgetpop" id="budgetPop" hidden>
-        <h2><span>Monthly grocery budget</span><button class="btn" id="bpClose" aria-label="Close" style="padding:4px 10px">✕</button></h2>
-        <div class="qbtns" id="bpQuick"></div>
-        <p class="muted" id="bpSuggest" style="margin:0 0 10px"></p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="muted">$</span><input id="bpIn" type="number" min="0" step="5" class="num" aria-label="Monthly budget in dollars" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 12px;width:140px">
-        <button class="btn primary" id="bpSave">Save budget</button><button class="btn" id="bpClear">No budget</button></div>
-      </div>
       <div class="grid g-wide" style="margin-bottom:14px">
         <div class="panel"><h2>Month by month <span class="aside">last 6 months</span></h2><div id="ovTrips"></div></div>
         <div class="panel"><h2>Where it goes <span class="aside" id="ovDonutLabel"></span></h2><div id="ovDonut" style="display:flex;align-items:center;gap:18px;flex-wrap:wrap"></div></div>
       </div>
       <div class="grid g-wide" style="margin-bottom:14px">
-        <div class="panel"><h2>Recent receipts <a href="#reports" class="aside" style="color:var(--leaf-text);text-decoration:none">See all</a></h2><div class="tablewrap" id="ovRecent"></div></div>
+        <div class="panel"><h2>Recent receipts <a href="#receipts" class="aside" style="color:var(--leaf-text);text-decoration:none">See all</a></h2><div class="tablewrap" id="ovRecent"></div></div>
         <div class="panel"><h2>Quick insights</h2><div id="ovInsights"></div></div>
       </div>
-      <div class="panel"><h2>Category budgets <a href="#options" class="aside" style="color:var(--leaf-text);text-decoration:none">Edit</a></h2><div class="grid g4" id="ovBudgets"></div></div>
+      <div class="panel"><h2>Category budgets <a href="#settings" class="aside" style="color:var(--leaf-text);text-decoration:none">Edit</a></h2><div class="grid g4" id="ovBudgets"></div></div>
     </section>
 
     <!-- SCAN -->
@@ -249,6 +377,7 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--surface-2)}
           <details class="over"><summary>Date or store wrong? Set them here</summary>
             <div class="row"><input id="scanDate" placeholder="Date, YYYY-MM-DD (blank: read it)" aria-label="Date">
             <input id="scanStore" placeholder="Store (blank: read it)" aria-label="Store"></div></details>
+          <a class="scanlink" href="#upload">Have several? Upload them all at once</a>
           <img id="scanPreview" class="preview" alt="Receipt photo" hidden style="margin-top:14px">
         </div>
         <div class="panel" id="scanResult">
@@ -340,24 +469,22 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--surface-2)}
       <div class="panel"><h2>Still learning <span class="aside">predictions start after 2 purchases on different days</span></h2><div id="pantryLearning" class="muted"></div></div>
     </section>
 
-    <!-- OPTIONS -->
-    <section class="page" id="p-options">
-      <div class="ph"><div><h1>Options</h1><p>Budgets, and opening the app on your phone.</p></div></div>
-      <div class="grid g2">
-        <div class="panel"><h2>Budgets</h2>
-          <div class="field"><label for="budgetIn">Monthly grocery budget ($)</label><input id="budgetIn" type="number" min="0" step="5" class="num"></div>
-          <div id="catBudgets"></div>
-          <button class="btn primary" id="saveBudgets"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 12l5 5l10 -10"></path></svg>Save budgets</button>
-        </div>
-        <div class="stack"><div class="panel"><h2>Where your records are saved</h2><p class="muted" id="storageNote" style="margin:0">Checking…</p></div>
-        <div class="panel"><h2>Open on your phone</h2>
-          <p class="muted" style="margin-top:0">Point your phone’s camera at this code.</p>
-          <div id="qr"></div>
-          <p class="muted num" id="qrUrl" style="word-break:break-all;font-size:13px"></p>
-        </div></div>
-      </div>
-    </section>
   </main>
+</div>
+<nav class="tabbar" id="tabbar" aria-label="Main">
+  <a href="#home" data-page="home"><span class="pill"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 12l-2 0l9 -9l9 9l-2 0"></path><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"></path><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"></path></svg></span>Home</a>
+  <a href="#scan" data-page="scan"><span class="pill"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"></path><path d="M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"></path></svg></span>Scan</a>
+  <a href="#receipts" data-page="receipts"><span class="pill"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16l-3 -2l-2 2l-2 -2l-2 2l-2 -2l-3 2m4 -14h6m-6 4h6m-2 4h2"></path></svg></span>Receipts</a>
+  <a href="#settings" data-page="settings"><span class="pill"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M12 6a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path><path d="M4 6l8 0"></path><path d="M16 6l4 0"></path><path d="M6 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path><path d="M4 12l2 0"></path><path d="M10 12l10 0"></path><path d="M15 18a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path><path d="M4 18l11 0"></path><path d="M19 18l1 0"></path></svg></span>Settings</a>
+</nav>
+<div class="modal" id="budgetPop" hidden role="dialog" aria-modal="true" aria-labelledby="bpTitle">
+  <div class="sheet">
+    <h2><span id="bpTitle">Monthly grocery budget</span><button class="btn" id="bpClose" aria-label="Close" style="padding:4px 10px">✕</button></h2>
+    <p class="muted" id="bpSuggest" style="margin:0 0 14px"></p>
+    <div class="qbtns" id="bpQuick"></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px"><span class="muted">$</span><input id="bpIn" type="number" min="0" step="5" inputmode="decimal" class="num" aria-label="Monthly budget in dollars" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 12px;flex:1"></div>
+    <div style="display:flex;gap:8px"><button class="btn" id="bpClear" style="flex:1;justify-content:center">No budget</button><button class="btn primary" id="bpSave" style="flex:2;justify-content:center">Save budget</button></div>
+  </div>
 </div>
 <div class="toast" id="toast" role="status"></div>
 

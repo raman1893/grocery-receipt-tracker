@@ -29,8 +29,12 @@ def scanning_off(image, hint=""):
 
 app.read_receipt = scanning_off
 
+ip = app.lan_ip()
 print("\n" + "=" * 55)
 print("  DEMO: sample receipts, no model loaded")
 print("  Open on this laptop:  http://127.0.0.1:7860")
+if ip:
+    print(f"  Open on your phone:   http://{ip}:7860  (same Wi-Fi), or scan:")
+    app.print_qr(f"http://{ip}:7860")
 print("=" * 55 + "\n")
-app.demo.launch(**app.launch_options())
+app.demo.launch(server_name="0.0.0.0", **app.launch_options())   # 0.0.0.0: reachable from the phone too

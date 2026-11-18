@@ -1,6 +1,7 @@
 (() => {
 const IC = {"basket": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M10 14a2 2 0 1 0 4 0a2 2 0 0 0 -4 0\"></path><path d=\"M5.001 8h13.999a2 2 0 0 1 1.977 2.304l-1.255 7.152a3 3 0 0 1 -2.966 2.544h-9.512a3 3 0 0 1 -2.965 -2.544l-1.255 -7.152a2 2 0 0 1 1.977 -2.304\"></path><path d=\"M17 10l-2 -6\"></path><path d=\"M7 10l2 -6\"></path></svg>", "overview": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1\"></path><path d=\"M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1\"></path><path d=\"M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1\"></path><path d=\"M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1\"></path></svg>", "camera": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2\"></path><path d=\"M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0\"></path></svg>", "upload": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M15 8h.01\"></path><path d=\"M12.5 21h-6.5a3 3 0 0 1 -3 -3v-12a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v6.5\"></path><path d=\"M3 16l5 -5c.928 -.893 2.072 -.893 3 0l4 4\"></path><path d=\"M14 14l1 -1c.67 -.644 1.45 -.824 2.182 -.54\"></path><path d=\"M16 19h6\"></path><path d=\"M19 16v6\"></path></svg>", "analytics": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M10 3.2a9 9 0 1 0 10.8 10.8a1 1 0 0 0 -1 -1h-3.8a4.1 4.1 0 1 1 -5 -5v-4a.9 .9 0 0 0 -1 -.8\"></path><path d=\"M15 3.5a9 9 0 0 1 5.5 5.5h-4.5a9 9 0 0 0 -1 -1v-4.5\"></path></svg>", "reports": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M14 3v4a1 1 0 0 0 1 1h4\"></path><path d=\"M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2\"></path><path d=\"M9 9l1 0\"></path><path d=\"M9 13l6 0\"></path><path d=\"M9 17l6 0\"></path></svg>", "pantry": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M5 5a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2l0 -14\"></path><path d=\"M5 10h14\"></path><path d=\"M9 13v3\"></path><path d=\"M9 6v1\"></path></svg>", "options": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M12 6a2 2 0 1 0 4 0a2 2 0 1 0 -4 0\"></path><path d=\"M4 6l8 0\"></path><path d=\"M16 6l4 0\"></path><path d=\"M6 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0\"></path><path d=\"M4 12l2 0\"></path><path d=\"M10 12l10 0\"></path><path d=\"M15 18a2 2 0 1 0 4 0a2 2 0 1 0 -4 0\"></path><path d=\"M4 18l11 0\"></path><path d=\"M19 18l1 0\"></path></svg>", "qr": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M4 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4\"></path><path d=\"M7 17l0 .01\"></path><path d=\"M14 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4\"></path><path d=\"M7 7l0 .01\"></path><path d=\"M4 15a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4\"></path><path d=\"M17 7l0 .01\"></path><path d=\"M14 14l3 0\"></path><path d=\"M20 14l0 .01\"></path><path d=\"M14 14l0 3\"></path><path d=\"M14 20l3 0\"></path><path d=\"M17 17l3 0\"></path><path d=\"M20 17l0 3\"></path></svg>", "menu": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M4 6l16 0\"></path><path d=\"M4 12l16 0\"></path><path d=\"M4 18l16 0\"></path></svg>", "close": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M18 6l-12 12\"></path><path d=\"M6 6l12 12\"></path></svg>", "cart": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M4 19a2 2 0 1 0 4 0a2 2 0 1 0 -4 0\"></path><path d=\"M15 19a2 2 0 1 0 4 0a2 2 0 1 0 -4 0\"></path><path d=\"M17 17h-11v-14h-2\"></path><path d=\"M6 5l14 1l-1 7h-13\"></path></svg>", "receipt": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16l-3 -2l-2 2l-2 -2l-2 2l-2 -2l-3 2m4 -14h6m-6 4h6m-2 4h2\"></path></svg>", "apple": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M4 11.319c0 3.102 .444 5.319 2.222 7.978c1.351 1.797 3.156 2.247 5.08 .988c.426 -.268 .97 -.268 1.397 0c1.923 1.26 3.728 .809 5.079 -.988c1.778 -2.66 2.222 -4.876 2.222 -7.977c0 -2.661 -1.99 -5.32 -4.444 -5.32c-1.267 0 -2.41 .693 -3.22 1.44a.5 .5 0 0 1 -.672 0c-.809 -.746 -1.953 -1.44 -3.22 -1.44c-2.454 0 -4.444 2.66 -4.444 5.319\"></path><path d=\"M7 12c0 -1.47 .454 -2.34 1.5 -3\"></path><path d=\"M12 7c0 -1.2 .867 -4 3 -4\"></path></svg>", "up": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M3 17l6 -6l4 4l8 -8\"></path><path d=\"M14 7l7 0l0 7\"></path></svg>", "down": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M3 7l6 6l4 -4l8 8\"></path><path d=\"M21 10l0 7l-7 0\"></path></svg>", "milk": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M8 6h8v-2a1 1 0 0 0 -1 -1h-6a1 1 0 0 0 -1 1v2\"></path><path d=\"M16 6l1.094 1.759a6 6 0 0 1 .906 3.17v8.071a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2v-8.071a6 6 0 0 1 .906 -3.17l1.094 -1.759\"></path><path d=\"M10 16a2 2 0 1 0 4 0a2 2 0 1 0 -4 0\"></path><path d=\"M10 10h4\"></path></svg>", "bag": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M6.331 8h11.339a2 2 0 0 1 1.977 2.304l-1.255 8.152a3 3 0 0 1 -2.966 2.544h-6.852a3 3 0 0 1 -2.965 -2.544l-1.255 -8.152a2 2 0 0 1 1.977 -2.304\"></path><path d=\"M9 11v-5a3 3 0 0 1 6 0v5\"></path></svg>", "calendar": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12\"></path><path d=\"M16 3v4\"></path><path d=\"M8 3v4\"></path><path d=\"M4 11h16\"></path><path d=\"M11 15h1\"></path><path d=\"M12 15v3\"></path></svg>", "search": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0\"></path><path d=\"M21 21l-6 -6\"></path></svg>", "trash": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M4 7l16 0\"></path><path d=\"M10 11l0 6\"></path><path d=\"M14 11l0 6\"></path><path d=\"M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12\"></path><path d=\"M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3\"></path></svg>", "download": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2\"></path><path d=\"M7 11l5 5l5 -5\"></path><path d=\"M12 4l0 12\"></path></svg>", "cloud": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M7 18a4.6 4.4 0 0 1 0 -9a5 4.5 0 0 1 11 2h1a3.5 3.5 0 0 1 0 7h-1\"></path><path d=\"M9 15l3 -3l3 3\"></path><path d=\"M12 12l0 9\"></path></svg>", "check": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M5 12l5 5l10 -10\"></path></svg>", "warn": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M12 9v4\"></path><path d=\"M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0\"></path><path d=\"M12 16h.01\"></path></svg>", "egg": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M19 14.083c0 4.154 -2.966 6.74 -7 6.917c-4.2 0 -7 -2.763 -7 -6.917c0 -5.538 3.5 -11.09 7 -11.083c3.5 .007 7 5.545 7 11.083\"></path></svg>", "carrot": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M3 21s9.834 -3.489 12.684 -6.34a4.487 4.487 0 0 0 0 -6.344a4.483 4.483 0 0 0 -6.342 0c-2.86 2.861 -6.347 12.689 -6.347 12.689l.005 -.005\"></path><path d=\"M9 13l-1.5 -1.5\"></path><path d=\"M16 14l-2 -2\"></path><path d=\"M22 8s-1.14 -2 -3 -2c-1.406 0 -3 2 -3 2s1.14 2 3 2s3 -2 3 -2\"></path><path d=\"M16 2s-2 1.14 -2 3s2 3 2 3s2 -1.577 2 -3c0 -1.86 -2 -3 -2 -3\"></path></svg>", "meat": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M13.62 8.382l1.966 -1.967a2 2 0 1 1 3.414 -1.415a2 2 0 1 1 -1.413 3.414l-1.82 1.821\"></path><path d=\"M5.904 18.596c2.733 2.734 5.9 4 7.07 2.829c1.172 -1.172 -.094 -4.338 -2.828 -7.071c-2.733 -2.734 -5.9 -4 -7.07 -2.829c-1.172 1.172 .094 4.338 2.828 7.071\"></path><path d=\"M7.5 16l1 1\"></path><path d=\"M12.975 21.425c3.905 -3.906 4.855 -9.288 2.121 -12.021c-2.733 -2.734 -8.115 -1.784 -12.02 2.121\"></path></svg>", "bread": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M18 4a3 3 0 0 1 2 5.235v8.765a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-8.764a3 3 0 0 1 1.824 -5.231h12.176v-.005\"></path></svg>", "bottle": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M10 5h4v-2a1 1 0 0 0 -1 -1h-2a1 1 0 0 0 -1 1v2\"></path><path d=\"M14 3.5c0 1.626 .507 3.212 1.45 4.537l.05 .07a8.093 8.093 0 0 1 1.5 4.694v6.199a2 2 0 0 1 -2 2h-6a2 2 0 0 1 -2 -2v-6.2c0 -1.682 .524 -3.322 1.5 -4.693l.05 -.07a7.823 7.823 0 0 0 1.45 -4.537\"></path><path d=\"M7 14.803a2.4 2.4 0 0 0 1 -.803a2.4 2.4 0 0 1 2 -1a2.4 2.4 0 0 1 2 1a2.4 2.4 0 0 0 2 1a2.4 2.4 0 0 0 2 -1a2.4 2.4 0 0 1 1 -.805\"></path></svg>", "candy": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M7.05 11.293l4.243 -4.243a2 2 0 0 1 2.828 0l2.829 2.83a2 2 0 0 1 0 2.828l-4.243 4.243a2 2 0 0 1 -2.828 0l-2.829 -2.831a2 2 0 0 1 0 -2.828\"></path><path d=\"M16.243 9.172l3.086 -.772a1.5 1.5 0 0 0 .697 -2.516l-2.216 -2.217a1.5 1.5 0 0 0 -2.44 .47l-1.248 2.913\"></path><path d=\"M9.172 16.243l-.772 3.086a1.5 1.5 0 0 1 -2.516 .697l-2.217 -2.216a1.5 1.5 0 0 1 .47 -2.44l2.913 -1.248\"></path></svg>", "snow": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M10 4l2 1l2 -1\"></path><path d=\"M12 2v6.5l3 1.72\"></path><path d=\"M17.928 6.268l.134 2.232l1.866 1.232\"></path><path d=\"M20.66 7l-5.629 3.25l.01 3.458\"></path><path d=\"M19.928 14.268l-1.866 1.232l-.134 2.232\"></path><path d=\"M20.66 17l-5.629 -3.25l-2.99 1.738\"></path><path d=\"M14 20l-2 -1l-2 1\"></path><path d=\"M12 22v-6.5l-3 -1.72\"></path><path d=\"M6.072 17.732l-.134 -2.232l-1.866 -1.232\"></path><path d=\"M3.34 17l5.629 -3.25l-.01 -3.458\"></path><path d=\"M4.072 9.732l1.866 -1.232l.134 -2.232\"></path><path d=\"M3.34 7l5.629 3.25l2.99 -1.738\"></path></svg>", "cup": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M5 11h14v-3h-14l0 3\"></path><path d=\"M17.5 11l-1.5 10h-8l-1.5 -10\"></path><path d=\"M6 8v-1a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v1\"></path><path d=\"M15 5v-2\"></path></svg>", "home": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M5 12l-2 0l9 -9l9 9l-2 0\"></path><path d=\"M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7\"></path><path d=\"M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6\"></path></svg>", "bath": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M4 12h16a1 1 0 0 1 1 1v3a4 4 0 0 1 -4 4h-10a4 4 0 0 1 -4 -4v-3a1 1 0 0 1 1 -1\"></path><path d=\"M6 12v-7a2 2 0 0 1 2 -2h3v2.25\"></path><path d=\"M4 21l1 -1.5\"></path><path d=\"M20 21l-1 -1.5\"></path></svg>", "tag": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M6.5 7.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\"></path><path d=\"M3 6v5.172a2 2 0 0 0 .586 1.414l7.71 7.71a2.41 2.41 0 0 0 3.408 0l5.592 -5.592a2.41 2.41 0 0 0 0 -3.408l-7.71 -7.71a2 2 0 0 0 -1.414 -.586h-5.172a3 3 0 0 0 -3 3\"></path></svg>", "tax": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M9 14l6 -6\"></path><path d=\"M9 8.5a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0\" fill=\"currentColor\"></path><path d=\"M14 13.5a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0\" fill=\"currentColor\"></path><path d=\"M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16l-3 -2l-2 2l-2 -2l-2 2l-2 -2l-3 2\"></path></svg>", "lemon": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M17.536 3.393c3.905 3.906 3.905 10.237 0 14.143c-3.906 3.905 -10.237 3.905 -14.143 0l14.143 -14.143\"></path><path d=\"M5.868 15.06a6.5 6.5 0 0 0 9.193 -9.192\"></path><path d=\"M10.464 10.464l4.597 4.597\"></path><path d=\"M10.464 10.464v6.364\"></path><path d=\"M10.464 10.464h6.364\"></path></svg>", "salad": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M4 11h16a1 1 0 0 1 1 1v.5c0 1.5 -2.517 5.573 -4 6.5v1a1 1 0 0 1 -1 1h-8a1 1 0 0 1 -1 -1v-1c-1.687 -1.054 -4 -5 -4 -6.5v-.5a1 1 0 0 1 1 -1\"></path><path d=\"M18.5 11c.351 -1.017 .426 -2.236 .5 -3.714v-1.286h-2.256c-2.83 0 -4.616 .804 -5.64 2.076\"></path><path d=\"M5.255 11.008a12.204 12.204 0 0 1 -.255 -2.008v-1h1.755c.98 0 1.801 .124 2.479 .35\"></path><path d=\"M8 8l1 -4l4 2.5\"></path><path d=\"M13 11v-.5a2.5 2.5 0 1 0 -5 0v.5\"></path></svg>", "chev": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M9 6l6 6l-6 6\"></path></svg>", "plus": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M12 5l0 14\"></path><path d=\"M5 12l14 0\"></path></svg>", "list": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M3.5 5.5l1.5 1.5l2.5 -2.5\"></path><path d=\"M3.5 11.5l1.5 1.5l2.5 -2.5\"></path><path d=\"M3.5 17.5l1.5 1.5l2.5 -2.5\"></path><path d=\"M11 6l9 0\"></path><path d=\"M11 12l9 0\"></path><path d=\"M11 18l9 0\"></path></svg>", "clock": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0\"></path><path d=\"M12 7v5l3 3\"></path></svg>", "mushroom": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M20 11.1c0 -4.474 -3.582 -8.1 -8 -8.1s-8 3.626 -8 8.1a.9 .9 0 0 0 .9 .9h14.2a.9 .9 0 0 0 .9 -.9\"></path><path d=\"M10 12v7a2 2 0 1 0 4 0v-7\"></path></svg>", "pepper": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M13 11c0 2.21 -2.239 4 -5 4s-5 -1.79 -5 -4a8 8 0 1 0 16 0a3 3 0 0 0 -6 0\"></path><path d=\"M16 8c0 -2 2 -4 4 -4\"></path></svg>", "fish": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M16.69 7.44a6.973 6.973 0 0 0 -1.69 4.56c0 1.747 .64 3.345 1.699 4.571\"></path><path d=\"M2 9.504c7.715 8.647 14.75 10.265 20 2.498c-5.25 -7.761 -12.285 -6.142 -20 2.504\"></path><path d=\"M18 11v.01\"></path><path d=\"M11.5 10.5c-.667 1 -.667 2 0 3\"></path></svg>", "cheese": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M4.519 20.008l16.481 -.008v-3.5a2 2 0 1 1 0 -4v-3.5h-16.722\"></path><path d=\"M21 9l-9.385 -4.992c-2.512 .12 -4.758 1.42 -6.327 3.425c-1.423 1.82 -2.288 4.221 -2.288 6.854c0 2.117 .56 4.085 1.519 5.721\"></path><path d=\"M15 13v.01\"></path><path d=\"M8 13v.01\"></path><path d=\"M11 16v.01\"></path></svg>"};
 Object.assign(IC, {"patterns": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4\"></path><path d=\"M18 14v4h4\"></path><path d=\"M14 18a4 4 0 1 0 8 0a4 4 0 1 0 -8 0\"></path><path d=\"M15 3v4\"></path><path d=\"M7 3v4\"></path><path d=\"M3 11h16\"></path></svg>", "pencil": "<svg stroke=\"currentColor\" fill=\"none\" stroke-width=\"2\" viewBox=\"0 0 24 24\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\" height=\"1em\" width=\"1em\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4\"></path><path d=\"M13.5 6.5l4 4\"></path></svg>"});
+IC.back = '<svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 12l14 0"></path><path d="M5 12l6 6"></path><path d="M5 12l6 -6"></path></svg>';
 const niceTime = t => { if (!t) return ""; const [h, m] = t.split(":").map(Number); return `${(h % 12) || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`; };
 const CAT = {
   "Produce":["#5E9E4A","carrot"], "Dairy & Eggs":["#5E95CF","milk"], "Meat & Seafood":["#C2453D","meat"],
@@ -11,7 +12,7 @@ const cc = c => (CAT[c]||CAT.Other)[0], ci = c => IC[(CAT[c]||CAT.Other)[1]];
 
 let RECEIPTS = [];   // filled from the server by loadData()
 
-const money = v => "$" + v.toLocaleString("en-CA",{minimumFractionDigits:2,maximumFractionDigits:2});
+const money = v => v == null || isNaN(v) ? "" : "$" + Number(v).toLocaleString("en-CA",{minimumFractionDigits:2,maximumFractionDigits:2});
 const money0 = v => "$" + Math.round(v).toLocaleString("en-CA");
 const d = s => new Date(s + "T12:00:00");
 const fmt = (s, o={day:"numeric",month:"short"}) => d(s).toLocaleDateString("en-GB", o);
@@ -29,13 +30,30 @@ function lines(){ // flatten to one row per line, tax included as its own line
 }
 const total = r => r.subtotal + r.tax;
 const paidOf = r => sum(r.items) + r.tax;
-function duplicateFlags(){   // receipt id -> the earlier receipt it repeats (same store and day, total within $1)
-  const flags = {}, seen = {};
-  [...RECEIPTS].sort((a, b) => a.id.localeCompare(b.id)).forEach(r => {
-    const key = r.date + "|" + r.store, p = paidOf(r);
-    const twin = (seen[key] || []).find(o => Math.abs(paidOf(o) - p) <= 1);
-    if (twin) flags[r.id] = {of: twin, exact: Math.abs(paidOf(twin) - p) < 0.01};
-    (seen[key] = seen[key] || []).push(r);
+function fingerprint(a, b){   // 'exact', 'near' or null; mirrors fingerprint_match() in app.py
+  // Same store and day are given. Then: transaction ref, then checkout time (to the second when printed),
+  // then printed subtotal, then line totals within $1. A different ref or time means a different receipt,
+  // unless the printed subtotal also matches (then it may be a misread: flagged as possible).
+  const samePrinted = a.printed && b.printed && Math.abs(a.subtotal - b.subtotal) < 0.01;
+  if (a.ref && b.ref) return a.ref === b.ref ? "exact" : samePrinted ? "near" : null;
+  if (a.time && b.time){ const n = Math.min(a.time.length, b.time.length);
+    return a.time.slice(0, n) === b.time.slice(0, n) ? "exact" : samePrinted ? "near" : null; }
+  const gap = Math.abs(paidOf(a) - paidOf(b));
+  return samePrinted || gap < 0.01 ? "exact" : gap <= 1 ? "near" : null;
+}
+function duplicateFlags(){   // receipt id -> {of, exact} for extra copies of the same receipt
+  // Keeps the copy whose lines add up to its printed subtotal (or else the earliest), flags the rest.
+  const flags = {}, groups = [];
+  const norm = s => String(s || "").trim().toLowerCase();
+  const ok = r => r.printed && Math.abs(sum(r.items) - r.subtotal) < 0.01;
+  RECEIPTS.forEach(r => {
+    const key = r.date + "|" + norm(r.store);
+    const g = groups.find(g => g.key === key && g.list.some(o => fingerprint(r, o)));
+    if (g) g.list.push(r); else groups.push({key, list: [r]});
+  });
+  groups.filter(g => g.list.length > 1).forEach(g => {
+    const keep = [...g.list].sort((a, b) => (ok(b) - ok(a)) || a.id.localeCompare(b.id))[0];
+    g.list.filter(r => r !== keep).forEach(r => flags[r.id] = {of: keep, exact: fingerprint(r, keep) === "exact"});
   });
   return flags;
 }
@@ -48,7 +66,7 @@ function byCat(rows){ const m = {}; rows.forEach(r => m[r.category] = (m[r.categ
 const DEFAULT_CAT_BUDGETS = {"Produce":40,"Dairy & Eggs":35,"Meat & Seafood":35,"Pantry":25,"Bakery":15,"Snacks":15};
 function load(k, f){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : f; } catch(e){ return f; } }
 function save(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
-let BUDGET = 0, CAT_BUDGETS = {...DEFAULT_CAT_BUDGETS}, STORAGE = "";
+let BUDGET = 0, CAT_BUDGETS = {...DEFAULT_CAT_BUDGETS}, STORAGE = "", PREFS = {};
 
 // ---------- charts ----------
 function barsSVG(items, {h = 190, label = x => x.label, value = x => x.value, color = () => "var(--leaf)"} = {}){
@@ -167,7 +185,7 @@ function renderOverview(){
   const bchip = document.querySelector("#ovKpis .panel .chip");
   if (bchip){ bchip.classList.add("clickable"); bchip.setAttribute("role", "button"); bchip.tabIndex = 0;
     bchip.title = "Set your monthly grocery budget";
-    bchip.onclick = openBudget; bchip.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openBudget(); } }; }
+    bchip.onclick = () => openBudget(); bchip.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openBudget(); } }; }
 
   const last6 = ms.slice(-6).map(m => ({label: monthName(m).replace(/ 20(\d\d)$/, " ’$1"), value: sum(RECEIPTS.filter(r => monthKey(r.date) === m), total), m}));
   const shades = ["#C3E0B5","#9ECB8A","#78B464","#559A43","#3C8231","#2F6B27"].slice(-last6.length);
@@ -242,7 +260,15 @@ document.getElementById("scanFile").addEventListener("change", async e => {
   try {
     const res = await readOne(f, document.getElementById("scanDate").value.trim(), document.getElementById("scanStore").value.trim());
     box.innerHTML = scanResultHTML(res);
-    if (res.kind === "saved") await loadData();
+    if (res.kind === "saved" || res.kind === "duplicate"){
+      box.insertAdjacentHTML("afterbegin", `<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+        ${res.receipt_id ? '<button class="btn primary" id="scanView">View receipt</button>' : ""}
+        <button class="btn" id="scanAgain">${IC.camera}Scan another</button></div>`);
+      const v = document.getElementById("scanView");
+      if (v) v.onclick = () => openReceipt(res.receipt_id);
+      document.getElementById("scanAgain").onclick = () => document.getElementById("scanFile").click();
+    }
+    if (res.kind === "saved"){ await loadData(); maybePromptBudget(); }
   } catch (err) {
     box.innerHTML = scanResultHTML({kind: "error", message: (err && err.message) || String(err)});
   } finally { clearInterval(t); e.target.value = ""; }
@@ -273,8 +299,9 @@ document.getElementById("bulkFile").addEventListener("change", async e => {
     draw();
   }
   const saved = rows.filter(r => r.state.startsWith("Saved")).length, check = rows.filter(r => r.state === "Saved, check items").length;
-  document.getElementById("bulkCount").textContent = `${saved} of ${rows.length} saved` + (check ? `, ${check} to check in Reports` : "");
+  document.getElementById("bulkCount").textContent = `${saved} of ${rows.length} saved` + (check ? `, ${check} to check in Receipts` : "");
   e.target.value = ""; await loadData();
+  if (saved) maybePromptBudget();
 });
 
 // ---------- ANALYTICS ----------
@@ -367,15 +394,7 @@ document.getElementById("delYes").addEventListener("click", async () => {
     toast(`Deleted ${r.deleted} receipt${r.deleted === 1 ? "" : "s"} (${r.lines} lines).`);
   } catch (err) { toast("Couldn’t delete: " + (err && err.message || err)); }
 });
-document.getElementById("exportBtn").addEventListener("click", async () => {
-  try {
-    const f = await call("api_export"), bytes = Uint8Array.from(atob(f.b64), c => c.charCodeAt(0));
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([bytes], {type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
-    a.download = f.name; document.body.appendChild(a); a.click(); a.remove();
-    toast("Excel file downloaded.");
-  } catch (err) { toast("Couldn’t export: " + (err && err.message || err)); }
-});
+document.getElementById("exportBtn").addEventListener("click", downloadExcel);
 const QUESTIONS = {
   "Spend by category": "SELECT category, ROUND(SUM(amount), 2) AS spent\nFROM expenses\nGROUP BY category\nORDER BY spent DESC",
   "Spend by month": "SELECT substr(receipt_date, 1, 7) AS month,\n       COUNT(DISTINCT receipt_id) AS trips,\n       ROUND(SUM(amount), 2) AS spent\nFROM expenses\nGROUP BY month\nORDER BY month",
@@ -428,11 +447,14 @@ function renderPantry(){
   document.getElementById("pantryLearning").textContent = notes.join(" ") || "Nothing left to learn.";
 }
 
-// ---------- OPTIONS ----------
-function renderOptions(){
-  document.getElementById("budgetIn").value = BUDGET;
+// ---------- SETTINGS ----------
+function renderSettings(){
+  document.getElementById("stBudgetNote").textContent = BUDGET ? `${money0(BUDGET)} a month` : "Not set. Home shows spending against last month instead.";
+  document.getElementById("stBudget").textContent = BUDGET ? "Change" : "Set";
+  document.getElementById("stMore").checked = !!PREFS.show_advanced;
+  document.getElementById("stCats").hidden = !PREFS.show_advanced;
   document.getElementById("storageNote").innerHTML = STORAGE === "postgres"
-    ? '<span class="chip good">Neon (cloud)</span> Your receipts are saved permanently and are the same on every device.'
+    ? '<span class="chip good">Neon (cloud)</span> Saved permanently, the same on every device.'
     : '<span class="chip warn">This machine only</span> On Colab these are wiped when the session ends. Add your Neon connection string to keep them.';
   document.getElementById("catBudgets").innerHTML = Object.entries(CAT_BUDGETS).map(([c, b]) =>
     `<div class="field"><label for="cb-${esc(c)}" style="display:flex;align-items:center;gap:6px"><span style="color:${cc(c)}">${ci(c)}</span>${esc(c)} ($ per month)</label><input id="cb-${esc(c)}" data-cat="${esc(c)}" type="number" min="0" step="5" value="${b}" class="num cbIn"></div>`).join("");
@@ -445,11 +467,132 @@ function renderOptions(){
   }).catch(() => { box.textContent = "QR code unavailable."; });
 }
 document.getElementById("saveBudgets").addEventListener("click", () => {
-  BUDGET = Math.max(0, +document.getElementById("budgetIn").value || 0);
   document.querySelectorAll(".cbIn").forEach(i => CAT_BUDGETS[i.dataset.cat] = Math.max(0, +i.value || 0));
-  call("api_save_budgets", BUDGET, CAT_BUDGETS).then(() => toast("Budgets saved."))
-    .catch(err => toast("Couldn’t save budgets: " + (err && err.message || err)));
+  call("api_save_budgets", BUDGET, CAT_BUDGETS).then(() => toast("Category budgets saved."))
+    .catch(err => toast("Couldn’t save: " + (err && err.message || err)));
 });
+document.getElementById("stBudget").addEventListener("click", () => openBudget());
+document.getElementById("stMore").addEventListener("change", async e => {
+  PREFS.show_advanced = e.target.checked; applyPrefs(); renderSettings();
+  try { await call("api_set_pref", "show_advanced", e.target.checked); }
+  catch (err) { toast("Couldn’t save that setting: " + (err && err.message || err)); }
+});
+async function downloadExcel(){
+  try {
+    const f = await call("api_export"), bytes = Uint8Array.from(atob(f.b64), c => c.charCodeAt(0));
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([bytes], {type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
+    a.download = f.name; document.body.appendChild(a); a.click(); a.remove();
+    toast("Excel file downloaded.");
+  } catch (err) { toast("Couldn’t export: " + (err && err.message || err)); }
+}
+["stExport", "rcExport"].forEach(id => document.getElementById(id).addEventListener("click", downloadExcel));
+
+// ---------- HOME ----------
+const AV = ["#2F7A3B","#3E7CC2","#B7791F","#2E8C8C","#5E9E4A","#55606E"];   // no pink
+const avColor = s => AV[[...String(s)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % AV.length];
+const avatar = s => `<span class="av" style="background:${avColor(s)}">${esc((String(s).trim()[0] || "?").toUpperCase())}</span>`;
+function statusChip(r, dups){
+  if (dups[r.id]) return `<span class="chip ${dups[r.id].exact ? "bad" : "warn"}">${dups[r.id].exact ? "Duplicate" : "Possible duplicate"}</span>`;
+  if (r.printed && Math.abs(sum(r.items) - r.subtotal) >= 0.01) return '<span class="chip warn">Check items</span>';
+  return "";
+}
+const rowHTML = (r, dups, sel) => `<button class="row${sel ? " sel" : ""}" data-rid="${esc(r.id)}">${avatar(r.store)}
+  <span class="t"><b>${esc(r.store)}</b><span>${fmt(r.date, {weekday:"short", day:"numeric", month:"short"})}${r.time ? ", " + niceTime(r.time) : ""} · ${r.items.length} items</span></span>
+  <span class="amt num">${money(total(r))}${statusChip(r, dups)}</span></button>`;
+function wireRows(root){ root.querySelectorAll("[data-rid]").forEach(b => b.onclick = () => openReceipt(b.dataset.rid)); }
+function renderHome(){
+  const hr = new Date().getHours();
+  document.getElementById("hmHello").textContent = hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening";
+  const now = new Date(), cur = now.toISOString().slice(0, 7);
+  const prevD = new Date(now.getFullYear(), now.getMonth() - 1, 15), prev = prevD.toISOString().slice(0, 7);
+  const inM = m => RECEIPTS.filter(r => monthKey(r.date) === m);
+  const spent = sum(inM(cur), total), last = sum(inM(prev), total);
+  const mName = now.toLocaleDateString("en-GB", {month: "long"});
+  let foot;
+  if (BUDGET){
+    const left = BUDGET - spent, p = Math.min(spent / BUDGET, 1);
+    foot = `<div class="meter"><i class="${left < 0 ? "over" : ""}" style="width:${p * 100}%"></i></div>
+      <div class="foot"><span>${left >= 0 ? `${money(left)} left of ${money0(BUDGET)}` : `${money(-left)} over your ${money0(BUDGET)} budget`}</span><button class="link" data-budget>Change</button></div>`;
+  } else {
+    // Same point last month, so a half-finished month isn't compared with a whole one
+    const day = now.getDate(), lastSoFar = sum(inM(prev).filter(r => +r.date.slice(8, 10) <= day), total);
+    const cmp = lastSoFar ? `${spent <= lastSoFar ? IC.down : IC.up}` : "";
+    foot = `<div class="foot"><span style="display:flex;align-items:center;gap:6px">${lastSoFar
+        ? `${cmp}${money(Math.abs(spent - lastSoFar))} ${spent <= lastSoFar ? "less" : "more"} than this point last month`
+        : last ? `${money(last)} in all of ${prevD.toLocaleDateString("en-GB", {month: "long"})}` : "Your first month"}</span>
+      <button class="link" data-budget>Set a budget</button></div>`;
+  }
+  document.getElementById("hmHero").innerHTML = `<div class="lab">Spent in ${mName}</div><div class="big num">${money(spent)}</div>${foot}`;
+  document.querySelectorAll("#hmHero [data-budget]").forEach(b => b.onclick = () => openBudget());
+
+  const cats = byCat(lines().filter(l => monthKey(l.date) === cur && l.category !== "Tax")), top = cats.length ? cats[0][1] : 1;
+  document.getElementById("hmCats").innerHTML = cats.length ? cats.slice(0, 5).map(([c, a]) =>
+    `<div class="cbar"><span class="ci" style="background:${cc(c)}22;color:${cc(c)}">${ci(c)}</span>
+      <div><div class="nm"><span>${esc(c)}</span><span class="num">${money(a)}</span></div><div class="track"><i style="width:${a / top * 100}%;background:${cc(c)}"></i></div></div><span></span></div>`).join("")
+    : `<div class="empty">Nothing scanned in ${mName} yet.</div>`;
+  const dups = duplicateFlags(), recent = [...RECEIPTS].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)).slice(0, 4);
+  const box = document.getElementById("hmRecent");
+  box.innerHTML = recent.length ? recent.map(r => rowHTML(r, dups)).join("")
+    : '<div class="empty">No receipts yet. Tap <b>Scan</b> to add your first one.</div>';
+  wireRows(box);
+}
+document.getElementById("hmBudget").addEventListener("click", () => openBudget());
+
+// ---------- RECEIPTS ----------
+let SEL_RC = null, CONFIRM_DEL = false;
+function openReceipt(id){
+  SEL_RC = id; CONFIRM_DEL = false;
+  if (location.hash !== "#receipts") location.hash = "#receipts"; else renderReceipts();
+  document.getElementById("rcWrap").classList.add("open");
+}
+function renderReceipts(){
+  const q = document.getElementById("rcSearch").value.trim().toLowerCase(), dups = duplicateFlags();
+  const list = [...RECEIPTS].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))
+    .filter(r => !q || (r.store + " " + r.items.map(i => i.name).join(" ")).toLowerCase().includes(q));
+  document.getElementById("rcCount").textContent = `${RECEIPTS.length} receipt${RECEIPTS.length === 1 ? "" : "s"}, ${money(sum(RECEIPTS, total))} in all`;
+  const nd = Object.keys(dups).length;
+  document.getElementById("rcDup").innerHTML = nd ? `<div class="status warn">${IC.warn}<div><b>${nd} receipt${nd === 1 ? " looks" : "s look"} like ${nd === 1 ? "a copy" : "copies"}</b> of one already saved (same store, day and checkout time or total). Open ${nd === 1 ? "it" : "each one"} to delete the extra copy.</div></div>` : "";
+  let html = "", lastM = "";
+  list.forEach(r => { const m = monthKey(r.date);
+    if (m !== lastM){ html += (lastM ? "</div>" : "") + `<div class="mhead">${monthName(m)}</div><div class="list">`; lastM = m; }
+    html += rowHTML(r, dups, r.id === SEL_RC); });
+  const box = document.getElementById("rcList");
+  box.innerHTML = list.length ? html + "</div>" : `<div class="list"><div class="empty">${q ? "No receipts match that search." : "No receipts yet."}</div></div>`;
+  wireRows(box);
+  if (!RECEIPTS.some(r => r.id === SEL_RC)) SEL_RC = list.length && matchMedia("(min-width: 861px)").matches ? list[0].id : null;
+  renderDetail(dups);
+}
+function renderDetail(dups){
+  const el = document.getElementById("rcDetail"), r = RECEIPTS.find(x => x.id === SEL_RC);
+  if (!r){ el.innerHTML = '<div class="empty">Select a receipt to see its items.</div>'; document.getElementById("rcWrap").classList.remove("open"); return; }
+  const lineSum = sum(r.items), ok = r.printed && Math.abs(lineSum - r.subtotal) < 0.01, dup = dups[r.id];
+  const status = dup ? `<div class="status ${dup.exact ? "err" : "warn"}">${IC.warn}<div><b>${dup.exact ? "This is a copy" : "This may be a copy"}</b> of the ${esc(dup.of.store)} receipt from ${fmt(dup.of.date)}${dup.of.time ? " at " + niceTime(dup.of.time) : ""} (${money(total(dup.of))}). Delete this one to keep your totals right.</div></div>`
+    : !r.printed ? "" : ok ? `<div class="status ok">${IC.check}<div>The items match the subtotal on the receipt.</div></div>`
+    : `<div class="status warn">${IC.warn}<div>The items add up to ${money(lineSum)}, but the receipt says ${money(r.subtotal)}. A line may be missing or misread.</div></div>`;
+  el.innerHTML = `<button class="btn back" id="rcBack">${IC.back}All receipts</button>
+    <div class="dh">${avatar(r.store)}<div><b style="font-size:18px">${esc(r.store)}</b><div class="meta">${fmt(r.date, {weekday:"long", day:"numeric", month:"long", year:"numeric"})}${r.time ? ", " + niceTime(r.time) : ""}</div></div></div>
+    <div class="tot num">${money(total(r))}</div>
+    <div class="meta">${r.items.length} items${r.ref ? ` · Ref ${esc(r.ref)}` : ""}</div>
+    <div style="margin-top:14px">${status}</div>
+    <div class="il">${r.items.map(i => `<div><span>${esc(title(String(i.name)))}<small>${esc(i.category)}${i.unit_price != null && (i.qty !== 1 || i.unit === "kg") ? ` · ${i.qty}${i.unit === "kg" ? " kg" : ""} × ${money(i.unit_price)}` : ""}</small></span><span class="num">${money(i.amount)}</span></div>`).join("")}</div>
+    <div class="sumr"><span class="muted">Subtotal</span><span class="num">${money(r.subtotal)}</span></div>
+    <div class="sumr"><span class="muted">Tax</span><span class="num">${money(r.tax)}</span></div>
+    <div class="sumr" style="font-weight:700"><span>Total</span><span class="num">${money(total(r))}</span></div>
+    <div style="margin-top:18px">${CONFIRM_DEL
+      ? `<div class="confirm show" style="margin-top:0"><span>Delete this receipt and its ${r.items.length + (r.tax ? 1 : 0)} lines? This can’t be undone.</span><span style="flex:1"></span><button class="btn" id="rcNo">Cancel</button><button class="btn primary" id="rcYes" style="background:var(--red-text);border-color:var(--red-text)">Delete</button></div>`
+      : `<button class="btn danger" id="rcDel">${IC.trash}Delete receipt</button>`}</div>`;
+  document.getElementById("rcBack").onclick = () => { SEL_RC = null; document.getElementById("rcWrap").classList.remove("open"); renderReceipts(); window.scrollTo(0, 0); };
+  const del = document.getElementById("rcDel"); if (del) del.onclick = () => { CONFIRM_DEL = true; renderDetail(dups); };
+  const no = document.getElementById("rcNo"); if (no) no.onclick = () => { CONFIRM_DEL = false; renderDetail(dups); };
+  const yes = document.getElementById("rcYes");
+  if (yes) yes.onclick = async () => {
+    try { const res = await call("api_delete", [r.id]); SEL_RC = null; CONFIRM_DEL = false;
+      document.getElementById("rcWrap").classList.remove("open"); await loadData(); toast(`Deleted (${res.lines} lines).`); }
+    catch (err) { toast("Couldn’t delete: " + (err && err.message || err)); }
+  };
+}
+document.getElementById("rcSearch").addEventListener("input", renderReceipts);
 
 // ---------- ONE-TAP BUDGET ----------
 function suggestedBudget(){
@@ -460,29 +603,44 @@ function suggestedBudget(){
   const spent = sum(RECEIPTS.filter(r => monthKey(r.date) === last), total);
   return {month: last, spent, amount: Math.max(10, Math.ceil(spent * 1.05 / 10) * 10)};
 }
-function openBudget(){
+let BUDGET_PROMPT = false;
+function openBudget(prompt = false){
+  BUDGET_PROMPT = prompt;
   const pop = document.getElementById("budgetPop"), s = suggestedBudget();
-  const picks = [100, 150, 200]; if (s && !picks.includes(s.amount)) picks.push(s.amount);
+  const picks = [150, 250, 400]; if (s && !picks.includes(s.amount)) picks.push(s.amount);
+  document.getElementById("bpTitle").textContent = prompt ? "Set a monthly budget?" : "Monthly grocery budget";
+  document.getElementById("bpClear").textContent = prompt ? "Not now" : "No budget";
   document.getElementById("bpQuick").innerHTML = picks.sort((a, b) => a - b).map(v =>
-    `<button class="btn${v === BUDGET ? " primary" : ""}" data-v="${v}">${money0(v)}${s && v === s.amount ? " (suggested)" : ""}</button>`).join("");
+    `<button class="btn${v === (BUDGET || (s && s.amount)) ? " primary" : ""}" data-v="${v}">${money0(v)}</button>`).join("");
   document.querySelectorAll("#bpQuick .btn").forEach(b => b.onclick = () => {
     document.getElementById("bpIn").value = b.dataset.v;
     document.querySelectorAll("#bpQuick .btn").forEach(x => x.classList.toggle("primary", x === b)); });
-  document.getElementById("bpSuggest").textContent = s
-    ? `Suggested: ${money0(s.amount)}, a little above ${monthName(s.month)} (${money(s.spent)}).`
-    : "Pick an amount, or type your own.";
+  document.getElementById("bpSuggest").textContent = (prompt ? "Home will show how much is left this month. " : "")
+    + (s ? `Suggested ${money0(s.amount)}, a little above ${monthName(s.month)} (${money(s.spent)}).` : "Pick an amount, or type your own.");
   document.getElementById("bpIn").value = BUDGET || (s ? s.amount : "");
-  pop.hidden = false; document.getElementById("bpIn").focus();
+  pop.hidden = false;
 }
+function closeBudget(){
+  document.getElementById("budgetPop").hidden = true;
+  if (BUDGET_PROMPT && !BUDGET){ PREFS.budget_prompt_dismissed = true;      // ask once; Settings can set it later
+    call("api_set_pref", "budget_prompt_dismissed", true).catch(() => {}); }
+  BUDGET_PROMPT = false;
+}
+function maybePromptBudget(){ if (!BUDGET && !PREFS.budget_prompt_dismissed) openBudget(true); }
+function current(){ return pageName(); }
 async function saveBudget(value){
   BUDGET = Math.max(0, +value || 0);
-  try { await call("api_save_budgets", BUDGET, CAT_BUDGETS); document.getElementById("budgetPop").hidden = true;
-        renderOverview(); toast(BUDGET ? `Budget set to ${money0(BUDGET)} a month.` : "Budget removed."); }
+  try { await call("api_save_budgets", BUDGET, CAT_BUDGETS);
+        if (!BUDGET && BUDGET_PROMPT) closeBudget(); else { BUDGET_PROMPT = false; document.getElementById("budgetPop").hidden = true; }
+        const n = current(); if (n !== "scan" && n !== "upload") PAGES[n]();
+        toast(BUDGET ? `Budget set to ${money0(BUDGET)} a month.` : "No budget set."); }
   catch (err) { toast("Couldn’t save the budget: " + (err && err.message || err)); }
 }
 document.getElementById("bpSave").addEventListener("click", () => saveBudget(document.getElementById("bpIn").value));
-document.getElementById("bpClear").addEventListener("click", () => saveBudget(0));
-document.getElementById("bpClose").addEventListener("click", () => document.getElementById("budgetPop").hidden = true);
+document.getElementById("bpClear").addEventListener("click", () => BUDGET_PROMPT ? closeBudget() : saveBudget(0));
+document.getElementById("bpClose").addEventListener("click", closeBudget);
+document.getElementById("budgetPop").addEventListener("click", e => { if (e.target.id === "budgetPop") closeBudget(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !document.getElementById("budgetPop").hidden) closeBudget(); });
 document.getElementById("bpIn").addEventListener("keydown", e => { if (e.key === "Enter") saveBudget(e.target.value); });
 
 // ---------- SHOPPING PATTERNS ----------
@@ -551,25 +709,31 @@ function renderPatterns(){
 }
 
 // ---------- navigation ----------
-const PAGES = {overview:renderOverview, scan:() => {}, upload:() => {}, analytics:renderAnalytics, patterns:renderPatterns, reports:renderReports, pantry:renderPantry, options:renderOptions};
+const PAGES = {home:renderHome, scan:() => {}, upload:() => {}, receipts:renderReceipts, settings:renderSettings,
+               overview:renderOverview, analytics:renderAnalytics, patterns:renderPatterns, reports:renderReports, pantry:renderPantry};
+const MORE = new Set(["overview", "analytics", "patterns", "reports", "pantry"]);   // shown only with "Show more pages"
+function pageName(){
+  const n = location.hash.slice(1);
+  return PAGES[n] && (!MORE.has(n) || PREFS.show_advanced) ? n : "home";
+}
+function applyPrefs(){ document.getElementById("navMore").hidden = !PREFS.show_advanced; }
 const side = document.getElementById("side"), menuBtn = document.getElementById("menuBtn");
 function show(){
-  const name = PAGES[location.hash.slice(1)] ? location.hash.slice(1) : "overview";
+  const name = pageName();
   document.querySelectorAll(".page").forEach(p => p.classList.toggle("on", p.id === "p-" + name));
-  document.querySelectorAll(".nav a").forEach(a => a.toggleAttribute("aria-current", a.dataset.page === name) || (a.dataset.page === name && a.setAttribute("aria-current", "page")));
-  document.querySelectorAll(".nav a").forEach(a => a.dataset.page === name ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
+  const nav = name === "upload" ? "scan" : name;
+  document.querySelectorAll(".nav a, .tabbar a").forEach(a => a.dataset.page === nav ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
+  if (name !== "receipts") document.getElementById("rcWrap").classList.remove("open");
   PAGES[name]();
-  side.classList.remove("open"); menuBtn.setAttribute("aria-expanded", "false");
   window.scrollTo(0, 0);
 }
 document.getElementById("ovMonth").addEventListener("change", renderOverview);
-menuBtn.addEventListener("click", () => { const o = side.classList.toggle("open"); menuBtn.setAttribute("aria-expanded", String(o)); });
-document.addEventListener("click", e => { if (side.classList.contains("open") && !side.contains(e.target) && !menuBtn.contains(e.target)) { side.classList.remove("open"); menuBtn.setAttribute("aria-expanded", "false"); } });
 let toastT; function toast(msg){ const t = document.getElementById("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 3200); }
 async function loadData(){
   const d = await call("api_data");
   RECEIPTS = d.receipts || []; BUDGET = d.budget || 0; STORAGE = d.storage || ""; CAT_BUDGETS = d.cat_budgets || {...DEFAULT_CAT_BUDGETS};
-  const name = PAGES[location.hash.slice(1)] ? location.hash.slice(1) : "overview";
+  PREFS = d.prefs || {}; applyPrefs();
+  const name = pageName();
   if (name !== "scan" && name !== "upload") PAGES[name]();
 }
 window.addEventListener("hashchange", show);

@@ -59,7 +59,7 @@ def get_model():
 
 PROMPT = f"""You are reading a photo of a grocery store receipt.
 Return ONLY a JSON object, with no other text, in exactly this structure:
-{{"store": "store name", "date": "YYYY-MM-DD", "time": "HH:MM",
+{{"store": "store name", "date": "YYYY-MM-DD", "time": "HH:MM:SS", "ref": "",
  "items": [{{"name": "item name as printed", "qty": 1, "unit": "ea", "unit_price": 0.00,
             "amount": 0.00, "department": "", "category": ""}}],
  "subtotal": 0.00, "tax": 0.00, "total": 0.00}}
@@ -74,7 +74,8 @@ Rules:
 - Small fees are purchases too: include reusable bags (e.g. "REUBL SHRT PC" under OTHER SERVICES), deposits and eco fees.
 - Skip lines whose amount is 0.00, and skip subtotal, tax, total, payment and card lines.
 - "date": take it from the printed 4-digit-year date such as 2026/10/18 if there is one. On No Frills receipts the "DateTime" line is YY/MM/DD, so 26/09/23 means 2026-09-23 (year 2026, September, day 23), never 2023.
-- "time": the checkout time printed on the receipt, as 24-hour HH:MM (e.g. 16:52), or null if none is printed.
+- "time": the checkout time printed on the receipt, as 24-hour HH:MM:SS including seconds if printed (e.g. 16:52:47), or null if none is printed.
+- "ref": the transaction reference printed on the receipt (labelled Ref, Ref #, Trans, Transaction #, Trace or Order #), or null. NEVER a card number, account number or authorization for a card.
 - Ignore faint mirrored text showing through from the back of the paper.
 - "tax" is the total sales tax (HST/GST/PST). Write numbers without $ signs. Use null if something is not printed."""
 
@@ -159,6 +160,30 @@ def fix_swapped_date(iso):
     return iso
 
 
+def clean_time(value):
+    """'16:52', '4:52:47', '16.52' -> 'HH:MM' or 'HH:MM:SS'; anything else -> None."""
+    m = re.match(r"^\s*(\d{1,2})[:.](\d{2})(?:[:.](\d{2}))?", str(value or ""))
+    if not m or int(m[1]) > 23 or int(m[2]) > 59 or (m[3] and int(m[3]) > 59):
+        return None
+    hh, tail = int(m[1]), str(value)[m.end():].strip().lower()
+    if tail.startswith("p") and hh < 12:
+        hh += 12
+    elif tail.startswith("a") and hh == 12:
+        hh = 0
+    return f"{hh:02d}:{m[2]}" + (f":{m[3]}" if m[3] else "")
+
+
+def clean_ref(value):
+    """A transaction reference like 'Ref# 004512'; never keeps anything that looks like a card number."""
+    s = re.sub(r"^(ref|trans(action)?|trace|order)\s*(no\.?|#|num(ber)?)?\s*[:#]?\s*", "", str(value or "").strip(), flags=re.I)
+    s = re.sub(r"[^A-Za-z0-9-]", "", s)
+    if not 3 <= len(s) <= 24 or re.search(r"[*xX]{3,}", str(value or "")):
+        return None
+    if s.isdigit() and len(s) >= 13:          # card-number length: never store
+        return None
+    return s.upper()
+
+
 def to_receipt(text):
     """Turn the model's JSON answer into the structure the rest of the app uses."""
     cleaned = re.sub(r"```(?:json)?", "", text)
@@ -195,9 +220,8 @@ def to_receipt(text):
         receipt_date = None
     raw_store = str(data.get("store") or "").strip()
     store = find_store(raw_store) or raw_store.title() or None
-    m = re.match(r"^\s*(\d{1,2})[:.](\d{2})", str(data.get("time") or ""))
-    receipt_time = f"{int(m[1]):02d}:{m[2]}" if m and int(m[1]) < 24 and int(m[2]) < 60 else None
-    return {"store": store, "date": receipt_date, "time": receipt_time, "items": items,
+    return {"store": store, "date": receipt_date, "time": clean_time(data.get("time")),
+            "ref": clean_ref(data.get("ref")), "items": items,
             "subtotal": _num(data.get("subtotal")), "tax": _num(data.get("tax")) or None,
             "total": _num(data.get("total"))}
 
@@ -256,7 +280,7 @@ SCHEMA = {
             item TEXT, qty REAL, unit TEXT, unit_price REAL, amount REAL, department TEXT,
             category TEXT, created_at TEXT)""",
         "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)",
-        "CREATE TABLE IF NOT EXISTS receipt_info (receipt_id TEXT PRIMARY KEY, subtotal REAL, total REAL, receipt_time TEXT)",
+        "CREATE TABLE IF NOT EXISTS receipt_info (receipt_id TEXT PRIMARY KEY, subtotal REAL, total REAL, receipt_time TEXT, receipt_ref TEXT)",
     ],
     "postgres": [
         """CREATE TABLE IF NOT EXISTS expenses (
@@ -264,7 +288,7 @@ SCHEMA = {
             item TEXT, qty NUMERIC(12,3), unit TEXT, unit_price NUMERIC(12,3), amount NUMERIC(12,2),
             department TEXT, category TEXT, created_at TEXT)""",
         "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)",
-        "CREATE TABLE IF NOT EXISTS receipt_info (receipt_id TEXT PRIMARY KEY, subtotal NUMERIC(12,2), total NUMERIC(12,2), receipt_time TEXT)",
+        "CREATE TABLE IF NOT EXISTS receipt_info (receipt_id TEXT PRIMARY KEY, subtotal NUMERIC(12,2), total NUMERIC(12,2), receipt_time TEXT, receipt_ref TEXT)",
     ],
 }
 
@@ -283,8 +307,9 @@ def get_engine():
                 c.execute(text(ddl))
             have = {col["name"] for col in inspect(c).get_columns("expenses")}
             info_cols = {col["name"] for col in inspect(c).get_columns("receipt_info")}
-            if "receipt_time" not in info_cols:                # upgrade older databases
-                c.execute(text("ALTER TABLE receipt_info ADD COLUMN receipt_time TEXT"))
+            for col in ("receipt_time", "receipt_ref"):        # upgrade older databases
+                if col not in info_cols:
+                    c.execute(text(f"ALTER TABLE receipt_info ADD COLUMN {col} TEXT"))
             for col, typ in (("unit", "TEXT"), ("unit_price", "REAL"), ("department", "TEXT")):
                 if col not in have:                       # upgrade older databases
                     c.execute(text(f"ALTER TABLE expenses ADD COLUMN {col} {typ}"))
@@ -329,29 +354,86 @@ def is_duplicate(receipt_date, store, amount):
     return any(abs(float(s or 0) - amount) < 0.01 for (s,) in rows)
 
 
-def similar_receipt(receipt_date, store, amount, tolerance=1.0):
-    """Total of an already-saved receipt from the same store and day within $1, else None."""
-    rows = db_rows("SELECT SUM(amount) FROM expenses WHERE receipt_date = :d AND store = :s GROUP BY receipt_id",
-                   d=receipt_date, s=store)
-    close = [float(s or 0) for (s,) in rows if abs(float(s or 0) - amount) <= tolerance]
-    return close[0] if close else None
+def saved_twins(receipt_date, store):
+    """Receipts already saved for this store and day: (id, sum of lines, printed subtotal, time, ref)."""
+    rows = db_rows("""SELECT e.receipt_id, SUM(e.amount), MAX(i.subtotal), MAX(i.receipt_time), MAX(i.receipt_ref)
+                      FROM expenses e LEFT JOIN receipt_info i ON i.receipt_id = e.receipt_id
+                      WHERE e.receipt_date = :d AND LOWER(TRIM(e.store)) = LOWER(TRIM(:s))
+                      GROUP BY e.receipt_id""", d=receipt_date, s=store)
+    return [(rid, float(t or 0), float(p) if p is not None else None, tm, ref) for rid, t, p, tm, ref in rows]
+
+
+def same_time(a, b):
+    """Compare two checkout times at the precision both have (to the second if both have seconds)."""
+    n = min(len(a), len(b))
+    return a[:n] == b[:n]
+
+
+def fingerprint_match(new, old):
+    """Is `old` the same receipt as `new`? Returns 'exact', 'near' or None.
+
+    Layered fingerprint, all within the same store and day:
+      1. transaction reference (most specific), then
+      2. checkout time (to the second when printed), then
+      3. printed subtotal, then line totals within $1.
+    A different ref or time means a different receipt, unless the printed subtotal also matches
+    (then it may be a misread, so it's flagged as a possible duplicate rather than skipped)."""
+    same_printed = (new["printed"] is not None and old["printed"] is not None
+                    and abs(new["printed"] - old["printed"]) < 0.01)
+    if new["ref"] and old["ref"]:
+        if new["ref"] == old["ref"]:
+            return "exact"
+        return "near" if same_printed else None
+    if new["time"] and old["time"]:
+        if same_time(new["time"], old["time"]):
+            return "exact"
+        return "near" if same_printed else None
+    if same_printed or abs(new["paid"] - old["paid"]) < 0.01:
+        return "exact"
+    return "near" if abs(new["paid"] - old["paid"]) <= 1.0 else None
+
+
+def find_twin(receipt_date, store, paid, printed, receipt_time=None, ref=None):
+    """An already-saved copy of this receipt, by fingerprint. 'exact' twins beat 'near' ones."""
+    new = {"paid": paid, "printed": printed, "time": receipt_time, "ref": ref}
+    best = None
+    for rid, lines_sum, old_printed, old_time, old_ref in saved_twins(receipt_date, store):
+        old = {"paid": lines_sum, "printed": old_printed, "time": old_time, "ref": old_ref}
+        kind = fingerprint_match(new, old)
+        if not kind:
+            continue
+        old_ok = old_printed is not None and abs(lines_sum - old_printed - _tax_of(rid)) < 0.01
+        twin = {"id": rid, "total": lines_sum, "printed": old_printed, "exact": kind == "exact", "old_matched": old_ok}
+        if best is None or twin["exact"] > best["exact"]:
+            best = twin
+    return best
+
+
+def _tax_of(receipt_id):
+    rows = db_rows("SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE receipt_id = :r AND category = 'Tax'", r=receipt_id)
+    return float(rows[0][0] or 0) if rows else 0.0
 
 
 def save_rows(df):
+    out = df[COLUMNS].copy()
+    for col in ("qty", "unit_price", "amount"):        # always numbers, even when a column is empty
+        out[col] = pd.to_numeric(out[col], errors="coerce").astype("float64")
     with get_engine().begin() as c:
-        df[COLUMNS].to_sql("expenses", c, if_exists="append", index=False)
+        out.to_sql("expenses", c, if_exists="append", index=False)
 
 
-def save_receipt_info(receipt_id, subtotal, total, receipt_time=None):
-    db_run("""INSERT INTO receipt_info (receipt_id, subtotal, total, receipt_time) VALUES (:r, :s, :t, :tm)
+def save_receipt_info(receipt_id, subtotal, total, receipt_time=None, ref=None):
+    db_run("""INSERT INTO receipt_info (receipt_id, subtotal, total, receipt_time, receipt_ref)
+              VALUES (:r, :s, :t, :tm, :ref)
               ON CONFLICT (receipt_id) DO UPDATE SET subtotal = excluded.subtotal, total = excluded.total,
-              receipt_time = excluded.receipt_time""", r=receipt_id, s=subtotal, t=total, tm=receipt_time)
+              receipt_time = excluded.receipt_time, receipt_ref = excluded.receipt_ref""",
+           r=receipt_id, s=subtotal, t=total, tm=receipt_time, ref=ref)
 
 
 def receipt_info():
-    """receipt_id -> (printed subtotal, checkout time)."""
-    return {rid: (float(s) if s is not None else None, tm)
-            for rid, s, tm in db_rows("SELECT receipt_id, subtotal, receipt_time FROM receipt_info")}
+    """receipt_id -> (printed subtotal, checkout time, transaction reference)."""
+    return {rid: (float(s) if s is not None else None, tm, ref)
+            for rid, s, tm, ref in db_rows("SELECT receipt_id, subtotal, receipt_time, receipt_ref FROM receipt_info")}
 
 
 def delete_receipt_ids(ids):
@@ -374,6 +456,13 @@ def get_setting(key, default=None):
 def set_setting(key, value):
     db_run("""INSERT INTO settings (key, value) VALUES (:k, :v)
               ON CONFLICT (key) DO UPDATE SET value = excluded.value""", k=key, v=str(value))
+
+
+PREF_KEYS = {"show_advanced", "budget_prompt_dismissed"}
+
+
+def get_prefs():
+    return {k: get_setting(k) == "1" for k in PREF_KEYS}
 
 
 def get_budget():
@@ -425,7 +514,7 @@ def nice_date(value):
 def nice_time(hhmm):
     """16:52 -> 4:52 pm"""
     try:
-        hh, mm = map(int, str(hhmm).split(":"))
+        hh, mm = map(int, str(hhmm).split(":")[:2])
         return f"{(hh % 12) or 12}:{mm:02d} {'am' if hh < 12 else 'pm'}"
     except ValueError:
         return str(hhmm)
@@ -767,7 +856,7 @@ def process_receipt(image, date_override="", store_override=""):
         days_off = (dt.date.today() - dt.date.fromisoformat(receipt_date)).days
         if days_off < -1 or days_off > 120:
             date_note = (f"  \nThe date read was {nice_date(receipt_date)}, which looks unlikely. If it's wrong, "
-                         f"delete this receipt in Records and scan again with the date set under "
+                         f"delete this receipt in Receipts and scan again with the date set under "
                          f"\"Date or store wrong?\".")
     store = (store_override or "").strip() or r["store"] or "Unknown store"
 
@@ -778,19 +867,25 @@ def process_receipt(image, date_override="", store_override=""):
     base = {"text": text, "view": view, "store": store, "date": receipt_date,
             "items": n_items, "paid": paid}
 
-    if is_duplicate(receipt_date, store, paid):
-        return {**base, "kind": "duplicate",
-                "message": f"**Already saved.** A {store} receipt from {nice_date(receipt_date)} "
-                           f"for ${paid:,.2f} is in your records, so nothing new was added."}
-
-    near = similar_receipt(receipt_date, store, paid)
+    gap = items_gap(r)
+    new_matched = gap is not None and abs(gap) < 0.01
+    twin = find_twin(receipt_date, store, paid, r["subtotal"], r.get("time"), r.get("ref"))
+    replaced = None
+    if twin and twin["exact"]:
+        if new_matched and not twin["old_matched"]:
+            delete_receipt_ids([twin["id"]])          # the saved copy was misread; this reading adds up
+            replaced = twin
+        else:
+            return {**base, "kind": "duplicate",
+                    "message": f"**Already saved.** This {store} receipt from {nice_date(receipt_date)} "
+                               f"(${(r['subtotal'] if r['subtotal'] is not None else paid):,.2f}) is already in your records, so nothing new was added."}
+    near = twin if twin and not twin["exact"] else None
     df["receipt_id"] = dt.datetime.now().strftime("%Y%m%d%H%M%S%f")
     df["receipt_date"], df["store"] = receipt_date, store
     df["created_at"] = dt.datetime.now().isoformat(timespec="seconds")
     save_rows(df)
-    save_receipt_info(df["receipt_id"].iloc[0], r["subtotal"], r["total"], r.get("time"))   # chip + Patterns
+    save_receipt_info(df["receipt_id"].iloc[0], r["subtotal"], r["total"], r.get("time"), r.get("ref"))
 
-    gap = items_gap(r)
     when = nice_date(receipt_date) + (f" at {nice_time(r.get('time'))}" if r.get("time") else "")
     message = (f"**Saved {n_items} items from {store}, {when}.** "
                f"You paid ${paid:,.2f}.")
@@ -805,9 +900,12 @@ def process_receipt(image, date_override="", store_override=""):
                     f"subtotal is ${r['subtotal']:,.2f}, so a line worth about ${abs(gap):,.2f} "
                     f"seems to be {'missing' if gap > 0 else 'extra or misread'}.")
     message += date_note
-    if near is not None:
+    if replaced:
+        message += (f"  \n**Replaced an earlier copy of this receipt** that had been misread "
+                    f"(its lines added up to ${replaced['total']:,.2f}).")
+    elif near:
         message += (f"  \n**This looks like a receipt you've already saved** ({store}, {nice_date(receipt_date)}, "
-                    f"${near:,.2f}). If it's the same one, delete the extra copy in Reports.")
+                    f"${near['total']:,.2f}). If it's the same one, delete the extra copy in Receipts.")
     return {**base, "kind": "saved", "matched": matched, "message": message,
             "receipt_id": df["receipt_id"].iloc[0]}
 
@@ -857,7 +955,7 @@ def api_data():
     if not df.empty:
         for rid, g in df.groupby("receipt_id", sort=False):
             items = g[g["category"] != "Tax"]
-            printed, rtime = info.get(rid, (None, None))
+            printed, rtime, rref = info.get(rid, (None, None, None))
             receipts.append({
                 "id": str(rid),
                 "date": str(g["receipt_date"].iloc[0])[:10],
@@ -865,6 +963,7 @@ def api_data():
                 "subtotal": round(float(printed if printed is not None else items["amount"].sum()), 2),
                 "printed": printed is not None,
                 "time": rtime,
+                "ref": rref,
                 "tax": round(float(g.loc[g["category"] == "Tax", "amount"].sum()), 2),
                 "items": [{"name": r.item, "qty": _clean(r.qty) or 1, "unit": r.unit or "ea",
                            "unit_price": _clean(r.unit_price), "amount": round(float(r.amount), 2),
@@ -875,7 +974,8 @@ def api_data():
         cats = json.loads(get_setting("cat_budgets") or "null") or DEFAULT_CAT_BUDGETS
     except ValueError:
         cats = DEFAULT_CAT_BUDGETS
-    return {"receipts": receipts, "budget": get_budget(), "cat_budgets": cats, "storage": storage_kind()}
+    return {"receipts": receipts, "budget": get_budget(), "cat_budgets": cats, "storage": storage_kind(),
+            "prefs": get_prefs()}
 
 
 def api_scan(path, date_override="", store_override=""):
@@ -890,7 +990,8 @@ def api_scan(path, date_override="", store_override=""):
          "category": r["Category"]} for r in view.to_dict("records")]
     return {"kind": res.get("kind"), "message": res.get("message", ""), "store": res.get("store"),
             "date": res.get("date"), "paid": _clean(res.get("paid")), "matched": res.get("matched"),
-            "items": _clean(res.get("items")), "lines": lines, "text": res.get("text", "")}
+            "items": _clean(res.get("items")), "lines": lines, "text": res.get("text", ""),
+            "receipt_id": res.get("receipt_id")}
 
 
 # A scan takes 30-60 s, too long to hold one request open through a share link.
@@ -952,6 +1053,13 @@ def api_save_budgets(budget, cat_budgets):
     return True
 
 
+def api_set_pref(key, value):
+    if key not in PREF_KEYS:
+        return False
+    set_setting(key, "1" if value else "0")
+    return True
+
+
 def api_phone_url(origin):
     """The address a phone should open: the public link, or this laptop's Wi-Fi address."""
     u = urlparse(origin or "")
@@ -1009,6 +1117,7 @@ PAGE_FUNCTIONS = [
     _page_fn("api_export", lambda _=None: api_export()),
     _page_fn("api_save_budgets", lambda args: api_save_budgets(*args)),
     _page_fn("api_phone_url", lambda origin: api_phone_url(origin)),
+    _page_fn("api_set_pref", lambda args: api_set_pref(*args)),
 ]
 
 with gr.Blocks(title="FreshAnalytics", fill_width=True) as demo:
