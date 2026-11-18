@@ -7,7 +7,7 @@ const CAT = {
   "Produce":["#5E9E4A","carrot"], "Dairy & Eggs":["#5E95CF","milk"], "Meat & Seafood":["#C2453D","meat"],
   "Bakery":["#D29A45","bread"], "Pantry":["#A8794A","bottle"], "Snacks":["#9B5DA8","candy"], "Frozen":["#3FA6BD","snow"],
   "Beverages":["#2E8C8C","cup"], "Household":["#7D8A99","home"], "Personal Care":["#D27FA7","bath"],
-  "Other":["#A7AEA9","tag"], "Tax":["#BFC6C1","tax"] };
+  "Other":["#A7AEA9","tag"], "Tax":["#BFC6C1","tax"], "Not itemized":["#D9DDDA","warn"] };
 const cc = c => (CAT[c]||CAT.Other)[0], ci = c => IC[(CAT[c]||CAT.Other)[1]];
 
 let RECEIPTS = [];   // filled from the server by loadData()
@@ -160,61 +160,143 @@ function gapDays(){   // typical days between trips: the median gap, so one odd 
 }
 const title = s => s.toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase());
 
-// ---------- OVERVIEW ----------
+// ---------- DASHBOARD (one page: overview + analytics) ----------
+// Every number here is what you paid: printed subtotal + tax, the same as Home and Receipts.
+// If a receipt's lines don't add up to its printed subtotal, the difference shows as "Not itemized",
+// so charts, donut and totals always agree.
+let PERIOD = load("fa_period", null);           // null = this month; "all"; or a list of "YYYY-MM"
+function selMonths(){
+  const ms = months(); if (!ms.length) return [];
+  if (PERIOD === "all") return ms;
+  if (Array.isArray(PERIOD)){ const s = PERIOD.filter(m => ms.includes(m)); if (s.length) return s.sort(); }
+  return [ms[ms.length - 1]];
+}
+function periodLabel(sel){
+  const ms = months();
+  if (!sel.length) return "No receipts yet";
+  if (sel.length === ms.length && ms.length > 1) return "All time";
+  if (sel.length === 1) return monthName(sel[0]);
+  const contiguous = sel.every((m, i) => !i || ms.indexOf(m) === ms.indexOf(sel[i - 1]) + 1);
+  return contiguous ? `${monthName(sel[0]).split(" ")[0]} – ${monthName(sel[sel.length - 1])}` : `${sel.length} months`;
+}
+function dashReceipts(){
+  const sel = new Set(selMonths()), st = document.getElementById("ovStore").value || "all";
+  return RECEIPTS.filter(r => sel.has(monthKey(r.date)) && (st === "all" || r.store === st));
+}
+function dashLines(){ const ids = new Set(dashReceipts().map(r => r.id)); return lines().filter(l => ids.has(l.rid)); }
+function partsOf(rs){   // category -> amount, adding up exactly to what was paid
+  const m = {};
+  rs.forEach(r => {
+    const S = sum(r.items), P = r.subtotal, k = S > P + 0.005 && S ? P / S : 1;
+    r.items.forEach(i => m[i.category] = (m[i.category] || 0) + i.amount * k);
+    if (P - S > 0.005) m["Not itemized"] = (m["Not itemized"] || 0) + (P - S);
+    if (r.tax) m.Tax = (m.Tax || 0) + r.tax;
+  });
+  return Object.entries(m).filter(([, a]) => a > 0.004).sort((a, b) => b[1] - a[1]);
+}
+function setupSlicer(){
+  const ms = months(), sel = selMonths();
+  document.getElementById("pdBtn").innerHTML = `${IC.calendar}<span class="lbl">${esc(periodLabel(sel))}</span>${IC.chev}`;
+  document.getElementById("pdList").innerHTML = [...ms].reverse().map(m =>
+    `<label class="ck"><input type="checkbox" data-m="${m}" ${sel.includes(m) ? "checked" : ""}> ${monthName(m)}</label>`).join("");
+  document.getElementById("pdAll").checked = ms.length && sel.length === ms.length;
+  const q = PERIOD === "all" ? "all" : !Array.isArray(PERIOD) ? "1" : null;
+  document.querySelectorAll("#pdQuick button").forEach(b => b.classList.toggle("on", b.dataset.q === q));
+  const st = document.getElementById("ovStore"), keep = st.value;
+  st.innerHTML = `<option value="all">All stores</option>` + [...new Set(RECEIPTS.map(r => r.store))].sort().map(x => `<option>${esc(x)}</option>`).join("");
+  if (keep && [...st.options].some(o => o.value === keep)) st.value = keep;
+}
+function setPeriod(p){ PERIOD = p; save("fa_period", p); renderOverview(); }
+document.getElementById("pdBtn").addEventListener("click", e => {
+  e.stopPropagation(); const pop = document.getElementById("pdPop"); pop.hidden = !pop.hidden;
+  document.getElementById("pdBtn").setAttribute("aria-expanded", String(!pop.hidden)); });
+document.getElementById("pdPop").addEventListener("click", e => e.stopPropagation());
+document.addEventListener("click", () => { const pop = document.getElementById("pdPop"); if (pop && !pop.hidden){ pop.hidden = true; document.getElementById("pdBtn").setAttribute("aria-expanded", "false"); } });
+document.getElementById("pdQuick").addEventListener("click", e => {
+  const q = e.target.dataset && e.target.dataset.q; if (!q) return;
+  const ms = months();
+  document.getElementById("pdPop").hidden = true; document.getElementById("pdBtn").setAttribute("aria-expanded", "false");
+  setPeriod(q === "all" ? "all" : q === "1" ? null : ms.slice(-(+q)));
+});
+document.getElementById("pdAll").addEventListener("change", e => setPeriod(e.target.checked ? "all" : null));
+document.getElementById("pdList").addEventListener("change", () => {
+  const picked = [...document.querySelectorAll("#pdList input:checked")].map(i => i.dataset.m);
+  setPeriod(!picked.length ? null : picked.length === months().length ? "all" : picked.sort());
+});
+document.getElementById("ovStore").addEventListener("change", renderOverview);
+
 function renderOverview(){
-  const ms = months(), sel = document.getElementById("ovMonth");
-  const keep = sel.value && ms.includes(sel.value) ? sel.value : ms[ms.length-1];
-  sel.innerHTML = ms.map(m => `<option value="${m}">${monthName(m)}</option>`).join("");
+  setupSlicer();
+  const ms = months(), sel = selMonths(), one = sel.length === 1;
   if (!ms.length){
-    document.getElementById("ovKpis").innerHTML = '<div class="panel empty" style="grid-column:1/-1">No receipts yet. <a href="#scan" style="color:var(--leaf-text)">Scan your first one</a> to see your overview.</div>';
-    ["ovTrips","ovDonut","ovRecent","ovInsights","ovBudgets"].forEach(id => document.getElementById(id).innerHTML = '<div class="empty">Nothing yet.</div>');
+    document.getElementById("ovKpis").innerHTML = '<div class="panel empty" style="grid-column:1/-1">No receipts yet. <a href="#scan" style="color:var(--leaf-text)">Scan your first one</a> to see your dashboard.</div>';
+    ["ovTrips","ovDonut","anTop","anCats","ovInsights","ovBudgets"].forEach(id => document.getElementById(id).innerHTML = '<div class="empty">Nothing yet.</div>');
     document.getElementById("ovDonutLabel").textContent = ""; return; }
-  sel.value = keep;
-  const prev = ms[ms.indexOf(keep)-1];
-  const rs = RECEIPTS.filter(r => monthKey(r.date) === keep), prs = prev ? RECEIPTS.filter(r => monthKey(r.date) === prev) : [];
-  const spent = sum(rs, total), trips = rs.length, avg = trips ? spent/trips : 0, pavg = prs.length ? sum(prs, total)/prs.length : 0;
-  const nItems = sum(rs, r => r.items.length);
-  const pct = BUDGET ? spent/BUDGET : 0, tone = pct < .8 ? "good" : pct <= 1 ? "warn" : "bad";
-  const g = gapDays();
+  const rs = dashReceipts(), label = periodLabel(sel);
+  const prev = one ? ms[ms.indexOf(sel[0]) - 1] : null;
+  const st = document.getElementById("ovStore").value;
+  const prs = prev ? RECEIPTS.filter(r => monthKey(r.date) === prev && (st === "all" || r.store === st)) : [];
+  const spent = sum(rs, total), trips = rs.length, avg = trips ? spent / trips : 0, pavg = prs.length ? sum(prs, total) / prs.length : 0;
+  const nItems = sum(rs, r => r.items.length), g = gapDays();
+  const pct = BUDGET ? spent / BUDGET : 0, tone = pct < .8 ? "good" : pct <= 1 ? "warn" : "bad";
+  document.getElementById("ovSub").textContent = `${label}${st && st !== "all" ? " · " + st : ""}`;
   document.getElementById("ovKpis").innerHTML =
-    kpiCard("Spent", money(spent), "cart", "#2F7A3B", BUDGET ? `${Math.round(pct*100)}% of ${money0(BUDGET)} ${IC.pencil}` : `Set a budget ${IC.pencil}`, BUDGET ? tone : "good") +
+    kpiCard("Spent", money(spent), "cart", "#2F7A3B",
+      one ? (BUDGET ? `${Math.round(pct * 100)}% of ${money0(BUDGET)} ${IC.pencil}` : `Set a budget ${IC.pencil}`) : `${money(spent / sel.length)} a month`,
+      one && BUDGET ? tone : one ? "good" : "plain") +
     kpiCard("Trips", trips, "receipt", "#3E7CC2", g ? `about every ${g} days` : "first trips", "plain") +
     kpiCard("Average basket", money(avg), "basket", "#B7791F",
-      pavg ? `${avg >= pavg ? IC.up : IC.down} ${money0(Math.abs(avg - pavg))}` : "first month", pavg && avg > pavg ? "warn" : "good", pavg ? `vs ${monthName(prev).split(" ")[0]}` : "") +
-    kpiCard("Items", nItems, "apple", "#7A55B5", trips ? `${Math.round(nItems/trips)} per trip` : "–", "plain");
-  const bchip = document.querySelector("#ovKpis .panel .chip");
+      pavg ? `${avg >= pavg ? IC.up : IC.down} ${money0(Math.abs(avg - pavg))}` : "per trip", pavg && avg > pavg ? "warn" : pavg ? "good" : "plain", pavg ? `vs ${monthName(prev).split(" ")[0]}` : "") +
+    kpiCard("Items", nItems, "apple", "#7A55B5", trips ? `${Math.round(nItems / trips)} per trip` : "–", "plain");
+  const bchip = one ? document.querySelector("#ovKpis .panel .chip") : null;
   if (bchip){ bchip.classList.add("clickable"); bchip.setAttribute("role", "button"); bchip.tabIndex = 0;
     bchip.title = "Set your monthly grocery budget";
     bchip.onclick = () => openBudget(); bchip.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openBudget(); } }; }
 
-  const last6 = ms.slice(-6).map(m => ({label: monthName(m).replace(/ 20(\d\d)$/, " ’$1"), value: sum(RECEIPTS.filter(r => monthKey(r.date) === m), total), m}));
-  const shades = ["#C3E0B5","#9ECB8A","#78B464","#559A43","#3C8231","#2F6B27"].slice(-last6.length);
-  document.getElementById("ovTrips").innerHTML = monthBarsSVG(last6, keep, BUDGET);
-  document.getElementById("ovDonutLabel").textContent = monthName(keep);
-  document.getElementById("ovDonut").innerHTML = donutHTML(byCat(lines().filter(l => monthKey(l.date) === keep)));
+  const short = m => monthName(m).replace(/ 20(\d\d)$/, " ’$1");
+  const inMonth = m => rs.filter(r => monthKey(r.date) === m);
+  if (one){   // one month: it against the 5 before it, with the budget line
+    const all = st === "all" ? RECEIPTS : RECEIPTS.filter(r => r.store === st), i = ms.indexOf(sel[0]);
+    const win = ms.slice(Math.max(0, i - 5), i + 1).map(m => ({label: short(m), m, value: sum(all.filter(r => monthKey(r.date) === m), total)}));
+    document.getElementById("ovTrips").innerHTML = monthBarsSVG(win, sel[0], BUDGET);
+    document.getElementById("ovTripsLabel").textContent = "this month and the 5 before";
+  } else {
+    document.getElementById("ovTrips").innerHTML = stackedSVG(sel.map(m => ({label: short(m), parts: partsOf(inMonth(m))})));
+    document.getElementById("ovTripsLabel").textContent = "by category";
+  }
+  document.getElementById("ovDonutLabel").textContent = label;
+  document.getElementById("ovDonut").innerHTML = donutHTML(partsOf(rs));
 
-  const DUPS = duplicateFlags();
-  const recent = [...RECEIPTS].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 4);
-  document.getElementById("ovRecent").innerHTML = `<table><thead><tr><th>Date</th><th>Store</th><th class="right">Items</th><th class="right">Total</th><th>Check</th></tr></thead><tbody>` +
-    recent.map(r => { const ok = Math.abs(sum(r.items) - r.subtotal) < .01;
-      const chip = DUPS[r.id] ? '<span class="chip bad">Duplicate?</span>' : !r.printed ? '<span class="chip plain">Saved</span>' : ok ? '<span class="chip good">Matched</span>' : '<span class="chip warn">Check items</span>';
-      return `<tr><td>${fmt(r.date)}${r.time ? `<span class="muted">, ${niceTime(r.time)}</span>` : ""}</td><td>${esc(r.store)}</td><td class="right num">${r.items.length}</td><td class="right num">${money(total(r))}</td><td>${chip}</td></tr>`; }).join("") + `</tbody></table>`;
+  const items = dashLines().filter(l => l.category !== "Tax");
+  const tops = Object.entries(items.reduce((a, l) => (a[l.name] = a[l.name] || {amt: 0, cat: l.category}, a[l.name].amt += l.amount, a), {})).sort((a, b) => b[1].amt - a[1].amt).slice(0, 7);
+  const tmax = tops.length ? tops[0][1].amt : 1;
+  document.getElementById("anTop").innerHTML = tops.length ? tops.map(([n, v]) =>
+    `<div class="catrow" style="grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 70px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(title(n))}</span><div class="track"><i style="width:${v.amt / tmax * 100}%;background:${cc(v.cat)}"></i></div><span class="right num">${money(v.amt)}</span></div>`).join("") : '<div class="empty">Nothing in this period.</div>';
+  const cats = partsOf(rs), cmax = cats.length ? cats[0][1] : 1;
+  document.getElementById("anCats").innerHTML = cats.length ? cats.map(([c, a]) => {
+    const drill = c !== "Tax" && c !== "Not itemized";
+    return `<div class="catrow" ${drill ? `role="button" tabindex="0" data-cat="${esc(c)}" style="cursor:pointer"` : ""}><span class="ci" style="color:${cc(c)}">${ci(c)}</span><span>${esc(c)}${c === "Not itemized" ? ' <span class="muted" style="font-size:12.5px">(lines the scan missed)</span>' : ""}</span><div class="track"><i style="width:${a / cmax * 100}%;background:${cc(c)}"></i></div><span class="right num">${money(a)}</span><span class="right muted num pct">${Math.round(a / spent * 100)}%</span></div>`; }).join("")
+    : '<div class="empty">Nothing in this period. Try a wider one.</div>';
+  document.querySelectorAll("#anCats [data-cat]").forEach(el => { const go = () => drillCat(el.dataset.cat);
+    el.addEventListener("click", go); el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } }); });
+  document.getElementById("anDrill").hidden = true;
 
   const ins = [], up = priceChanges().filter(p => p.change > .005).sort((a, b) => b.change - a.change)[0];
-  if (up) ins.push(["#B7791F", "up", `${title(up.name)} up ${Math.round(up.change*100)}%`, `${money(up.first)} → ${money(up.last)} since ${fmt(up.from)}`]);
-  const cats = byCat(lines().filter(l => l.category !== "Tax")), all = sum(cats, c => c[1]);
-  if (cats.length) ins.push([cc(cats[0][0]), (CAT[cats[0][0]]||CAT.Other)[1], `${cats[0][0]} leads`, `${Math.round(cats[0][1]/all*100)}% of everything you’ve bought`]);
-  const bags = sum(lines().filter(l => /REUBL|BAG/i.test(l.name)));
-  if (bags) ins.push(["#2F7A3B", "bag", `Bags: ${money(bags)} so far`, "Bring your own to skip the fee"]);
+  if (up) ins.push(["#B7791F", "up", `${title(up.name)} up ${Math.round(up.change * 100)}%`, `${money(up.first)} → ${money(up.last)} since ${fmt(up.from)}`]);
+  const ic = cats.filter(([c]) => c !== "Tax" && c !== "Not itemized");
+  if (ic.length) ins.push([cc(ic[0][0]), (CAT[ic[0][0]] || CAT.Other)[1], `${ic[0][0]} leads`, `${Math.round(ic[0][1] / spent * 100)}% of ${label}`]);
+  const bags = sum(items.filter(l => /REUBL|BAG/i.test(l.name)));
+  if (bags) ins.push(["#2F7A3B", "bag", `Bags: ${money(bags)}`, "Bring your own to skip the fee"]);
   if (g) ins.push(["#3E7CC2", "calendar", `You shop about every ${g} days`, `${RECEIPTS.length} trips recorded`]);
   document.getElementById("ovInsights").innerHTML = ins.slice(0, 4).map(([c, i, b, s]) =>
-    `<div class="ins"><div class="ic" style="background:${c}">${IC[i]}</div><div><b>${esc(b)}</b><span class="muted">${esc(s)}</span></div></div>`).join("");
+    `<div class="ins"><div class="ic" style="background:${c}">${IC[i]}</div><div><b>${esc(b)}</b><span class="muted">${esc(s)}</span></div></div>`).join("") || '<div class="empty">Scan a few more receipts for insights.</div>';
 
-  const mc = Object.fromEntries(byCat(lines().filter(l => monthKey(l.date) === keep)));
-  document.getElementById("ovBudgets").innerHTML = Object.entries(CAT_BUDGETS).map(([c, b]) => {
-    const s = mc[c] || 0, p = b ? s/b : 0, col = p <= .8 ? cc(c) : p <= 1 ? "#D29A45" : "#C2453D";
-    return `<div><div class="budget-row"><span style="display:flex;align-items:center;gap:6px"><span style="color:${cc(c)};font-size:17px">${ci(c)}</span>${esc(c)}</span><span class="muted num">${money0(s)} of ${money0(b)}</span></div>
-      <div class="track"><i style="width:${Math.min(p, 1)*100}%;background:${col}"></i></div></div>`; }).join("");
+  document.getElementById("ovBudgetsPanel").hidden = !one;      // monthly budgets only make sense for one month
+  if (one){ const mc = Object.fromEntries(partsOf(rs));
+    document.getElementById("ovBudgets").innerHTML = Object.entries(CAT_BUDGETS).map(([c, b]) => {
+      const s = mc[c] || 0, p = b ? s / b : 0, col = p <= .8 ? cc(c) : p <= 1 ? "#D29A45" : "#C2453D";
+      return `<div><div class="budget-row"><span style="display:flex;align-items:center;gap:6px"><span style="color:${cc(c)};font-size:17px">${ci(c)}</span>${esc(c)}</span><span class="muted num">${money0(s)} of ${money0(b)}</span></div>
+        <div class="track"><i style="width:${Math.min(p, 1) * 100}%;background:${col}"></i></div></div>`; }).join(""); }
 }
 
 // ---------- SCAN ----------
@@ -304,43 +386,9 @@ document.getElementById("bulkFile").addEventListener("change", async e => {
   if (saved) maybePromptBudget();
 });
 
-// ---------- ANALYTICS ----------
-function anRows(){
-  const p = document.getElementById("anPeriod").value, s = document.getElementById("anStore").value, c = document.getElementById("anCat").value;
-  return lines().filter(l => (p === "all" || monthKey(l.date) === p) && (s === "all" || l.store === s) && (c === "all" || l.category === c));
-}
-function setupFilters(){
-  const keep = id => document.getElementById(id).value;
-  const p = keep("anPeriod"), s = keep("anStore"), c = keep("anCat");
-  document.getElementById("anPeriod").innerHTML = `<option value="all">All time</option>` + months().map(m => `<option value="${m}">${monthName(m)}</option>`).join("");
-  document.getElementById("anStore").innerHTML = `<option value="all">All stores</option>` + [...new Set(RECEIPTS.map(r => r.store))].map(x => `<option>${esc(x)}</option>`).join("");
-  document.getElementById("anCat").innerHTML = `<option value="all">All categories</option>` + Object.keys(CAT).map(x => `<option>${esc(x)}</option>`).join("");
-  if (p) document.getElementById("anPeriod").value = p; if (s) document.getElementById("anStore").value = s; if (c) document.getElementById("anCat").value = c;
-}
-function renderAnalytics(){
-  setupFilters();
-  const rows = anRows(), rids = [...new Set(rows.map(r => r.rid))], spent = sum(rows);
-  const items = rows.filter(r => r.category !== "Tax"), g = gapDays();
-  document.getElementById("anKpis").innerHTML =
-    kpiCard("Total spent", money(spent), "cart", "#2F7A3B", `${rids.length} receipts`, "plain") +
-    kpiCard("Average basket", money(rids.length ? spent/rids.length : 0), "basket", "#B7791F", "per trip", "plain") +
-    kpiCard("Items bought", items.length, "apple", "#7A55B5", `${new Set(items.map(i => i.name)).size} different`, "plain") +
-    kpiCard("Shopping rhythm", g ? `${g} days` : "–", "calendar", "#3E7CC2", "between trips", "plain");
-  const ms = [...new Set(rows.map(r => monthKey(r.date)))].sort();
-  document.getElementById("anMonthly").innerHTML = stackedSVG(ms.map(m => ({label: monthName(m).replace(" 20", " ’"), parts: byCat(rows.filter(r => monthKey(r.date) === m))})));
-  const tops = Object.entries(items.reduce((a, l) => (a[l.name] = a[l.name] || {amt:0, cat:l.category}, a[l.name].amt += l.amount, a), {})).sort((a, b) => b[1].amt - a[1].amt).slice(0, 7);
-  const tmax = tops.length ? tops[0][1].amt : 1;
-  document.getElementById("anTop").innerHTML = tops.length ? tops.map(([n, v]) =>
-    `<div class="catrow" style="grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 70px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(title(n))}</span><div class="track"><i style="width:${v.amt/tmax*100}%;background:${cc(v.cat)}"></i></div><span class="right num">${money(v.amt)}</span></div>`).join("") : '<div class="empty">Nothing in this view.</div>';
-  const cats = byCat(rows), cmax = cats.length ? cats[0][1] : 1;
-  document.getElementById("anCats").innerHTML = cats.length ? cats.map(([c, a]) =>
-    `<div class="catrow" role="button" tabindex="0" data-cat="${esc(c)}" style="cursor:pointer"><span class="ci" style="color:${cc(c)}">${ci(c)}</span><span>${esc(c)}</span><div class="track"><i style="width:${a/cmax*100}%;background:${cc(c)}"></i></div><span class="right num">${money(a)}</span><span class="right muted num pct">${Math.round(a/spent*100)}%</span></div>`).join("") : '<div class="empty">Nothing in this view. Try a wider period.</div>';
-  document.querySelectorAll("#anCats [data-cat]").forEach(el => { const go = () => drillCat(el.dataset.cat);
-    el.addEventListener("click", go); el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } }); });
-  document.getElementById("anDrill").hidden = true;
-}
+// ---------- drill-down (used by the Dashboard) ----------
 function drillCat(cat){
-  const rows = anRows().filter(r => r.category === cat), box = document.getElementById("anDrill");
+  const rows = dashLines().filter(r => r.category === cat), box = document.getElementById("anDrill");
   const by = {}; rows.forEach(r => { const o = by[r.name] = by[r.name] || {n:0, qty:0, amt:0, prices:[]}; o.n++; o.qty += r.qty; o.amt += r.amount; o.prices.push([r.date, r.unit_price]); });
   const list = Object.entries(by).sort((a, b) => b[1].amt - a[1].amt);
   box.hidden = false;
@@ -359,7 +407,6 @@ function drillItem(name){
     <p class="muted" style="margin:0 0 6px">Bought ${rows.length} time${rows.length > 1 ? "s" : ""}. ${rows.length > 1 ? `Price went from ${money(f)} to ${money(l)} (${ch >= 0 ? "+" : ""}${Math.round(ch*100)}%).` : ""}</p>
     ${lineSVG(rows.map(r => ({label: fmt(r.date), value: r.unit_price})))}</div>`;
 }
-["anPeriod","anStore","anCat"].forEach(id => document.getElementById(id).addEventListener("change", renderAnalytics));
 
 // ---------- REPORTS ----------
 function renderReports(){
@@ -710,10 +757,11 @@ function renderPatterns(){
 
 // ---------- navigation ----------
 const PAGES = {home:renderHome, scan:() => {}, upload:() => {}, receipts:renderReceipts, settings:renderSettings,
-               overview:renderOverview, analytics:renderAnalytics, patterns:renderPatterns, reports:renderReports, pantry:renderPantry};
-const MORE = new Set(["overview", "analytics", "patterns", "reports", "pantry"]);   // shown only with "Show more pages"
+               overview:renderOverview, patterns:renderPatterns, reports:renderReports, pantry:renderPantry};
+const MORE = new Set(["overview", "patterns", "reports", "pantry"]);   // shown only with "Show more pages"
 function pageName(){
-  const n = location.hash.slice(1);
+  let n = location.hash.slice(1);
+  if (n === "analytics") n = "overview";          // Spend Analytics is now part of the Dashboard
   return PAGES[n] && (!MORE.has(n) || PREFS.show_advanced) ? n : "home";
 }
 function applyPrefs(){ document.getElementById("navMore").hidden = !PREFS.show_advanced; }
@@ -727,7 +775,6 @@ function show(){
   PAGES[name]();
   window.scrollTo(0, 0);
 }
-document.getElementById("ovMonth").addEventListener("change", renderOverview);
 let toastT; function toast(msg){ const t = document.getElementById("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 3200); }
 async function loadData(){
   const d = await call("api_data");

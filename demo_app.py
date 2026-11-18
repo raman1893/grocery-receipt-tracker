@@ -1,6 +1,7 @@
 """Try FreshAnalytics with sample receipts: no AI model, no GPU, no Colab.
 
-Run:   py demo_app.py      then open http://127.0.0.1:7860      (Ctrl+C to stop)
+Run:   py demo_app.py           then open http://127.0.0.1:7860      (Ctrl+C to stop)
+       py demo_app.py --share   also gives a public link for your phone on any network
 
 app.py is not changed. This file borrows its screens and logic, uses its own
 database (demo.db) so real records are never touched, and switches scanning off.
@@ -37,4 +38,10 @@ if ip:
     print(f"  Open on your phone:   http://{ip}:7860  (same Wi-Fi), or scan:")
     app.print_qr(f"http://{ip}:7860")
 print("=" * 55 + "\n")
-app.demo.launch(server_name="0.0.0.0", **app.launch_options())   # 0.0.0.0: reachable from the phone too
+# 0.0.0.0: reachable from the phone on the same Wi-Fi.
+# py demo_app.py --share  also prints a public https link that works on any network (lasts 1 week).
+import sys
+SHARE = "--share" in sys.argv
+if SHARE:
+    print("  Public link: look for 'Running on public URL' below (takes ~10 seconds).\n")
+app.demo.launch(server_name="0.0.0.0", share=SHARE, **app.launch_options())

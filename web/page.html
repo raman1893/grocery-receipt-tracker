@@ -108,7 +108,7 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--surface-2)}
 .budget-row{display:flex;justify-content:space-between;font-size:14px;margin-bottom:6px}
 
 /* ---------- scan / upload ---------- */
-.drop{border:2px dashed var(--line);border-radius:16px;padding:44px 20px;text-align:center;background:var(--surface);cursor:pointer;transition:border-color .15s}
+.drop{display:block;border:2px dashed var(--line);border-radius:16px;padding:44px 20px;text-align:center;background:var(--surface);cursor:pointer;transition:border-color .15s}
 .drop:hover,.drop.over{border-color:var(--leaf)}
 .drop .big{width:64px;height:64px;border-radius:50%;background:var(--leaf-soft);color:var(--leaf-text);display:grid;place-items:center;font-size:30px;margin:0 auto 12px}
 .drop h3{margin:0 0 4px;font-size:18px}
@@ -268,6 +268,22 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--surface-2)}
   .fa .modal{align-items:flex-end;padding:0}
   .fa .modal .sheet{border-radius:22px 22px 0 0;max-width:none;padding-bottom:calc(22px + env(safe-area-inset-bottom,0px))}
 }
+
+.fa .slicers{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.fa .slicer{position:relative}
+.fa #pdBtn{min-width:190px;text-align:left;cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.fa #pdBtn svg{display:inline-block;flex:none}
+.fa #pdBtn .lbl{flex:1;overflow:hidden;text-overflow:ellipsis}
+.fa #pdBtn svg:last-child{transform:rotate(90deg)}
+.fa .slpop{position:absolute;right:0;top:calc(100% + 6px);z-index:40;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.14);padding:12px;width:260px;max-height:420px;overflow:auto}
+.fa .slpop .quick{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.fa .slpop .quick button{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 6px;font:inherit;font-size:13px;cursor:pointer;color:var(--ink)}
+.fa .slpop .quick button.on{background:var(--leaf-soft);border-color:var(--leaf);color:var(--leaf-text);font-weight:600}
+.fa .ck{display:flex;align-items:center;gap:10px;padding:8px 6px;border-radius:8px;cursor:pointer;font-size:14.5px}
+.fa .ck:hover{background:var(--surface-2)}
+.fa .ck input{-webkit-appearance:checkbox !important;appearance:auto !important;width:18px;height:18px;accent-color:var(--leaf);margin:0;background:none !important;border:none !important;box-shadow:none !important;flex:none}
+.fa .ck.all{border-bottom:1px solid var(--line);border-radius:0;margin-bottom:4px;font-weight:600}
+@media (max-width: 860px){ .fa .slicers{width:100%;flex-wrap:nowrap} .fa .slicer,.fa #ovStore{flex:1;min-width:0} .fa #pdBtn{width:100%;min-width:0} .fa .slpop{left:0;right:auto;width:min(300px,calc(100vw - 32px))} }
 </style>
 <div class="topbar">
   <button class="btn" id="menuBtn" aria-label="Open menu" aria-expanded="false" style="padding:8px"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M4 6l16 0"></path><path d="M4 12l16 0"></path><path d="M4 18l16 0"></path></svg></button>
@@ -284,7 +300,6 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--surface-2)}
       <div id="navMore" hidden>
         <div class="group">More</div>
         <a href="#overview" data-page="overview"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1"></path><path d="M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"></path><path d="M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1"></path><path d="M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1"></path></svg>Dashboard</a>
-        <a href="#analytics" data-page="analytics"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M10 3.2a9 9 0 1 0 10.8 10.8a1 1 0 0 0 -1 -1h-3.8a4.1 4.1 0 1 1 -5 -5v-4a.9 .9 0 0 0 -1 -.8"></path><path d="M15 3.5a9 9 0 0 1 5.5 5.5h-4.5a9 9 0 0 0 -1 -1v-4.5"></path></svg>Spend Analytics</a>
         <a href="#patterns" data-page="patterns"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4"></path><path d="M18 14v4h4"></path><path d="M14 18a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"></path><path d="M15 3v4"></path><path d="M7 3v4"></path><path d="M3 11h16"></path></svg>Shopping Patterns</a>
         <a href="#pantry" data-page="pantry"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M5 5a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2l0 -14"></path><path d="M5 10h14"></path><path d="M9 13v3"></path><path d="M9 6v1"></path></svg>Pantry</a>
         <a href="#reports" data-page="reports"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M14 3v4a1 1 0 0 0 1 1h4"></path><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2"></path><path d="M9 9l1 0"></path><path d="M9 13l6 0"></path><path d="M9 17l6 0"></path></svg>Reports &amp; SQL</a>
@@ -347,20 +362,35 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--surface-2)}
     <section class="page" id="p-overview">
       <div class="panel welcome" style="margin-bottom:14px">
         <div><h1 style="margin:0;font-size:28px;font-weight:700;letter-spacing:-0.02em">Dashboard</h1>
-          <p class="muted" style="margin:4px 0 0">Your grocery spending at a glance.</p></div>
+          <p class="muted" style="margin:4px 0 0" id="ovSub">Your grocery spending at a glance.</p></div>
         <div class="orbit" aria-hidden="true" title="Fresh from Canadian farms"><div class="ring"><span class="slot" style="--a:0deg"><span class="fruit"><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M16 9c-2-1.6-5.4-2-7.6.2-2.6 2.6-2.4 7.6.2 12.2 1.8 3.2 4 5 6 4.4.7-.2 1-.5 1.4-.5s.7.3 1.4.5c2 .6 4.2-1.2 6-4.4 2.6-4.6 2.8-9.6.2-12.2C21.4 7 18 7.4 16 9z" fill="#D9473F"/><path d="M11 12.4c-1 1.2-1.4 3-1 4.6" stroke="#F3A39C" stroke-width="1.6" stroke-linecap="round" fill="none"/><path d="M16 9.4c0-2 .6-3.6 1.8-4.8" stroke="#6B4A2E" stroke-width="1.6" stroke-linecap="round" fill="none"/><path d="M17.6 6.2c1.8-1.6 4.4-1.6 5.6-.6-1.2 1.6-3.6 2.2-5.6.6z" fill="#5FA83E"/></svg></span></span><span class="slot" style="--a:72deg"><span class="fruit"><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M20.6 11.4c-2.4-2.4-6.2-1.4-7.6 1.6L6.4 26.6c-.4.8.4 1.6 1.2 1.2L21.2 21c3-1.4 4-5.2 1.6-7.6z" fill="#EE7A23"/><path d="M12.2 17.6l2 1.6M10.2 21.4l1.8 1.4M14.6 13.8l1.6 1.2" stroke="#C85A12" stroke-width="1.3" stroke-linecap="round"/><path d="M20.4 11.6c.4-3 2.2-5.4 4.8-6.4-.6 2.6-2.2 4.8-4.8 6.4zM21.6 12.6c2.4-1.6 5.4-1.8 7.4-.8-2 1.6-4.8 2-7.4.8zM20.2 11.2c-.8-2.6-.2-5.4 1.4-7.2.6 2.4-.2 5-1.4 7.2z" fill="#5FA83E"/></svg></span></span><span class="slot" style="--a:144deg"><span class="fruit"><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M16 4c3.4 0 5.4 4.4 5.4 10.6S19.4 27 16 27s-5.4-6.2-5.4-12.4S12.6 4 16 4z" fill="#F4C430"/><g stroke="#D9A20F" stroke-width="1" fill="none"><path d="M12 10h8M11.2 14h9.6M11.2 18h9.6M12 22h8"/><path d="M14 5.6v20.8M18 5.6v20.8"/></g><path d="M16 27c-2.6-1.4-5.2-5.6-5.8-10.4-1.6 4.4-1.4 9.6.8 12.4 1.6.6 3.4.2 5-2z" fill="#5FA83E"/><path d="M16 27c2.6-1.4 5.2-5.6 5.8-10.4 1.6 4.4 1.4 9.6-.8 12.4-1.6.6-3.4.2-5-2z" fill="#4E9234"/></svg></span></span><span class="slot" style="--a:216deg"><span class="fruit"><svg aria-hidden="true" viewBox="0 0 32 32"><path d="M6.4 18.4c-1-4.6 2.4-9.6 8-10.6 5.4-1 10.6 1.4 11.4 5.8.8 4.6-2.2 9.4-7.8 10.4-5.6 1-10.6-1.2-11.6-5.6z" fill="#C8955A"/><path d="M9 14.6c1.2-2.4 3.6-4 6.2-4.4" stroke="#E0B886" stroke-width="1.6" stroke-linecap="round" fill="none"/><g fill="#9A6B37"><circle cx="12" cy="18" r="1"/><circle cx="17.6" cy="15" r=".9"/><circle cx="21.4" cy="18.6" r="1"/><circle cx="16" cy="20.8" r=".8"/></g></svg></span></span><span class="slot" style="--a:288deg"><span class="fruit"><svg aria-hidden="true" viewBox="0 0 32 32"><circle cx="11.4" cy="19.4" r="6" fill="#4A5FB0"/><circle cx="20.8" cy="20.6" r="5.4" fill="#3B4C96"/><circle cx="16.4" cy="11.6" r="5.2" fill="#5A70C4"/><g fill="#24305F"><circle cx="11.4" cy="19.4" r="1.5"/><circle cx="20.8" cy="20.6" r="1.4"/><circle cx="16.4" cy="11.6" r="1.4"/></g><g fill="#8C9BE0"><circle cx="11.4" cy="19.4" r=".6"/><circle cx="20.8" cy="20.6" r=".55"/><circle cx="16.4" cy="11.6" r=".55"/></g><path d="M18.4 6.4c1.4-1.2 3.4-1.4 4.6-.6-1.2 1.4-3.2 1.6-4.6.6z" fill="#5FA83E"/></svg></span></span></div><span class="cart"><svg aria-hidden="true" viewBox="0 0 48 48"><path d="M5 8h5.2l4.6 21.2a3 3 0 0 0 2.9 2.4h17.6a3 3 0 0 0 2.9-2.2L42 15H12.2" fill="none" stroke="#2F7A3B" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 22.5h24.6" stroke="#2F7A3B" stroke-width="2.4" stroke-linecap="round" opacity=".45"/><circle cx="19" cy="39" r="3.2" fill="#2F7A3B"/><circle cx="34" cy="39" r="3.2" fill="#2F7A3B"/></svg></span></div>
-        <select class="select" id="ovMonth" aria-label="Month"></select>
+        <div class="slicers">
+          <div class="slicer">
+            <button class="select" id="pdBtn" aria-haspopup="true" aria-expanded="false" type="button"></button>
+            <div class="slpop" id="pdPop" hidden>
+              <div class="quick" id="pdQuick">
+                <button type="button" data-q="1">This month</button><button type="button" data-q="3">Last 3 months</button>
+                <button type="button" data-q="6">Last 6 months</button><button type="button" data-q="all">All time</button>
+              </div>
+              <label class="ck all"><input type="checkbox" id="pdAll"> Select all</label>
+              <div id="pdList"></div>
+            </div>
+          </div>
+          <select class="select" id="ovStore" aria-label="Store"></select>
+        </div>
       </div>
       <div class="grid g4" id="ovKpis" style="margin-bottom:14px"></div>
       <div class="grid g-wide" style="margin-bottom:14px">
-        <div class="panel"><h2>Month by month <span class="aside">last 6 months</span></h2><div id="ovTrips"></div></div>
+        <div class="panel"><h2>Month by month <span class="aside" id="ovTripsLabel"></span></h2><div id="ovTrips"></div></div>
         <div class="panel"><h2>Where it goes <span class="aside" id="ovDonutLabel"></span></h2><div id="ovDonut" style="display:flex;align-items:center;gap:18px;flex-wrap:wrap"></div></div>
       </div>
       <div class="grid g-wide" style="margin-bottom:14px">
-        <div class="panel"><h2>Recent receipts <a href="#receipts" class="aside" style="color:var(--leaf-text);text-decoration:none">See all</a></h2><div class="tablewrap" id="ovRecent"></div></div>
+        <div class="panel"><h2>Most spent on</h2><div id="anTop"></div></div>
         <div class="panel"><h2>Quick insights</h2><div id="ovInsights"></div></div>
       </div>
-      <div class="panel"><h2>Category budgets <a href="#settings" class="aside" style="color:var(--leaf-text);text-decoration:none">Edit</a></h2><div class="grid g4" id="ovBudgets"></div></div>
+      <div class="panel" style="margin-bottom:14px"><h2>By category <span class="aside">select one to look closer</span></h2><div id="anCats"></div></div>
+      <div class="panel" id="anDrill" hidden style="margin-bottom:14px"></div>
+      <div class="panel" id="ovBudgetsPanel"><h2>Category budgets <a href="#settings" class="aside" style="color:var(--leaf-text);text-decoration:none">Edit</a></h2><div class="grid g4" id="ovBudgets"></div></div>
     </section>
 
     <!-- SCAN -->
@@ -373,7 +403,7 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--surface-2)}
             <h3>Take or choose a photo</h3>
             <div class="muted">Flat, in good light, the whole receipt in frame</div>
           </label>
-          <input type="file" id="scanFile" accept="image/*" capture="environment" hidden>
+          <input type="file" id="scanFile" accept="image/*" hidden>
           <details class="over"><summary>Date or store wrong? Set them here</summary>
             <div class="row"><input id="scanDate" placeholder="Date, YYYY-MM-DD (blank: read it)" aria-label="Date">
             <input id="scanStore" placeholder="Store (blank: read it)" aria-label="Store"></div></details>
@@ -400,23 +430,6 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--surface-2)}
         <div class="bar" style="margin-bottom:14px"><i id="bulkBar" style="width:0"></i></div>
         <div class="tablewrap" id="bulkTable"></div>
       </div>
-    </section>
-
-    <!-- ANALYTICS -->
-    <section class="page" id="p-analytics">
-      <div class="ph"><div><h1>Spend Analytics</h1><p>Where your grocery money goes, and how it changes.</p></div>
-        <div class="ctrls">
-          <select class="select" id="anPeriod" aria-label="Period"></select>
-          <select class="select" id="anStore" aria-label="Store"></select>
-          <select class="select" id="anCat" aria-label="Category"></select>
-        </div></div>
-      <div class="grid g4" id="anKpis" style="margin-bottom:14px"></div>
-      <div class="grid g-wide" style="margin-bottom:14px">
-        <div class="panel"><h2>Month by month</h2><div id="anMonthly"></div></div>
-        <div class="panel"><h2>Most spent on</h2><div id="anTop"></div></div>
-      </div>
-      <div class="panel" style="margin-bottom:14px"><h2>By category <span class="aside">select one to look closer</span></h2><div id="anCats"></div></div>
-      <div class="panel" id="anDrill" hidden></div>
     </section>
 
     <!-- PATTERNS -->
