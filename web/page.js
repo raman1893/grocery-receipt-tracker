@@ -7,7 +7,7 @@ const CAT = {
   "Produce":["#5E9E4A","carrot"], "Dairy & Eggs":["#5E95CF","milk"], "Meat & Seafood":["#C2453D","meat"],
   "Bakery":["#D29A45","bread"], "Pantry":["#A8794A","bottle"], "Snacks":["#9B5DA8","candy"], "Frozen":["#3FA6BD","snow"],
   "Beverages":["#2E8C8C","cup"], "Household":["#7D8A99","home"], "Personal Care":["#D27FA7","bath"],
-  "Other":["#A7AEA9","tag"], "Tax":["#BFC6C1","tax"], "Not itemized":["#D9DDDA","warn"] };
+  "Other":["#A7AEA9","tag"], "Tax":["#BFC6C1","tax"] };
 const cc = c => (CAT[c]||CAT.Other)[0], ci = c => IC[(CAT[c]||CAT.Other)[1]];
 
 let RECEIPTS = [];   // filled from the server by loadData()
@@ -34,7 +34,7 @@ function fingerprint(a, b){   // 'exact', 'near' or null; mirrors fingerprint_ma
   // Same store and day are given. Then: transaction ref, then checkout time (to the second when printed),
   // then printed subtotal, then line totals within $1. A different ref or time means a different receipt,
   // unless the printed subtotal also matches (then it may be a misread: flagged as possible).
-  const samePrinted = a.printed && b.printed && Math.abs(a.subtotal - b.subtotal) < 0.01;
+  const samePrinted = a.printed && b.printed && Math.abs(a.printed_sub - b.printed_sub) < 0.01;
   if (a.ref && b.ref) return a.ref === b.ref ? "exact" : samePrinted ? "near" : null;
   if (a.time && b.time){ const n = Math.min(a.time.length, b.time.length);
     return a.time.slice(0, n) === b.time.slice(0, n) ? "exact" : samePrinted ? "near" : null; }
@@ -45,7 +45,7 @@ function duplicateFlags(){   // receipt id -> {of, exact} for extra copies of th
   // Keeps the copy whose lines add up to its printed subtotal (or else the earliest), flags the rest.
   const flags = {}, groups = [];
   const norm = s => String(s || "").trim().toLowerCase();
-  const ok = r => r.printed && Math.abs(sum(r.items) - r.subtotal) < 0.01;
+  const ok = r => r.printed && Math.abs(sum(r.items) - r.printed_sub) < 0.01;
   RECEIPTS.forEach(r => {
     const key = r.date + "|" + norm(r.store);
     const g = groups.find(g => g.key === key && g.list.some(o => fingerprint(r, o)));
@@ -127,7 +127,7 @@ function donutHTML(parts){
   const leg = parts.slice(0, 6).map(([c, a]) => `<div><span class="dot" style="background:${cc(c)}"></span>${esc(c)}<b class="num">${Math.round(a/tot*100)}%</b></div>`).join("");
   return svg + `<div class="legend">${leg}</div>`;
 }
-function lineSVG(points){ // [{label, value}]
+function lineSVG(points, suffix = ""){ // [{label, value}]
   const W = 520, h = 170, top = 28, bottom = 28, ih = h - top - bottom;
   const max = Math.max(...points.map(p => p.value)) * 1.25 || 1, step = points.length > 1 ? (W - 80) / (points.length - 1) : 0;
   const xy = points.map((p, i) => [40 + (points.length > 1 ? i*step : (W-80)/2), top + ih - (p.value/max)*ih]);
@@ -135,7 +135,7 @@ function lineSVG(points){ // [{label, value}]
   return `<svg viewBox="0 0 ${W} ${h}" width="100%" role="img" aria-label="Price history">
     <line x1="30" x2="${W}" y1="${top+ih}" y2="${top+ih}" stroke="var(--line)"/>
     <path d="${path}" fill="none" stroke="var(--leaf)" stroke-width="2.5" stroke-linejoin="round"/>
-    ${xy.map((q, i) => `<circle cx="${q[0]}" cy="${q[1]}" r="5" fill="var(--leaf)"/><text x="${q[0]}" y="${q[1]-11}" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" class="num">${money(points[i].value)}</text><text x="${q[0]}" y="${h-8}" text-anchor="middle" font-size="12" fill="var(--muted)">${esc(points[i].label)}</text>`).join("")}
+    ${xy.map((q, i) => `<circle cx="${q[0]}" cy="${q[1]}" r="5" fill="var(--leaf)"/><text x="${q[0]}" y="${q[1]-11}" text-anchor="middle" font-size="12" font-weight="600" fill="var(--ink)" class="num">${money(points[i].value)}${suffix}</text><text x="${q[0]}" y="${h-8}" text-anchor="middle" font-size="12" fill="var(--muted)">${esc(points[i].label)}</text>`).join("")}
   </svg>`;
 }
 function kpiCard(label, value, icon, color, chip, chipTone = "good", sub = ""){
@@ -144,13 +144,22 @@ function kpiCard(label, value, icon, color, chip, chipTone = "good", sub = ""){
     <div class="ic" style="background:${color}">${IC[icon]}</div></div>`;
 }
 
+// ---------- prices ----------
+// Weighed items (bananas, plums) compare price per kg; everything else compares price per item.
+// A purchase read without its weight can't be compared per kg, so it's left out of that item's history.
+function priceSeries(name){
+  const rows = lines().filter(l => l.name === name && l.category !== "Tax").sort((a, b) => a.date.localeCompare(b.date));
+  const kg = rows.filter(l => l.unit === "kg" && l.qty > 0);
+  const useKg = kg.length > 0, pts = useKg ? kg : rows;
+  return {unit: useKg ? "/kg" : " each", left: rows.length - pts.length, all: rows.length,
+          points: pts.map(l => ({date: l.date, value: useKg ? (l.unit_price || l.amount / l.qty) : (l.unit_price || l.amount / (l.qty || 1))}))};
+}
 // ---------- insights ----------
 function priceChanges(){
-  const by = {};
-  lines().filter(l => l.category !== "Tax").forEach(l => (by[l.name] = by[l.name] || []).push(l));
-  return Object.entries(by).filter(([, a]) => a.length > 1)
-    .map(([n, a]) => { a.sort((x, y) => x.date.localeCompare(y.date));
-      const f = a[0].unit_price, l = a[a.length-1].unit_price; return {name:n, first:f, last:l, from:a[0].date, change:f ? l/f - 1 : 0, count:a.length}; });
+  const names = [...new Set(lines().filter(l => l.category !== "Tax").map(l => l.name))];
+  return names.map(n => { const s = priceSeries(n), p = s.points; if (p.length < 2) return null;
+    const f = p[0].value, l = p[p.length - 1].value;
+    return {name: n, first: f, last: l, from: p[0].date, change: f ? l / f - 1 : 0, count: p.length, unit: s.unit}; }).filter(Boolean);
 }
 const medianOf = a => { const s = [...a].sort((x, y) => x - y), m = s.length; return m ? (m % 2 ? s[(m - 1) / 2] : (s[m / 2 - 1] + s[m / 2]) / 2) : null; };
 const gapsOf = ds => ds.slice(1).map((x, i) => (d(x) - d(ds[i])) / 864e5);
@@ -161,8 +170,7 @@ function gapDays(){   // typical days between trips: the median gap, so one odd 
 const title = s => s.toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase());
 
 // ---------- DASHBOARD (one page: overview + analytics) ----------
-// Every number here is what you paid: printed subtotal + tax, the same as Home and Receipts.
-// If a receipt's lines don't add up to its printed subtotal, the difference shows as "Not itemized",
+// Every number here is the items read from your receipts plus tax, the same as Home and Receipts,
 // so charts, donut and totals always agree.
 let PERIOD = load("fa_period", null);           // null = this month; "all"; or a list of "YYYY-MM"
 function selMonths(){
@@ -184,14 +192,10 @@ function dashReceipts(){
   return RECEIPTS.filter(r => sel.has(monthKey(r.date)) && (st === "all" || r.store === st));
 }
 function dashLines(){ const ids = new Set(dashReceipts().map(r => r.id)); return lines().filter(l => ids.has(l.rid)); }
-function partsOf(rs){   // category -> amount, adding up exactly to what was paid
+function partsOf(rs){   // category -> amount for these receipts (items + tax)
   const m = {};
-  rs.forEach(r => {
-    const S = sum(r.items), P = r.subtotal, k = S > P + 0.005 && S ? P / S : 1;
-    r.items.forEach(i => m[i.category] = (m[i.category] || 0) + i.amount * k);
-    if (P - S > 0.005) m["Not itemized"] = (m["Not itemized"] || 0) + (P - S);
-    if (r.tax) m.Tax = (m.Tax || 0) + r.tax;
-  });
+  rs.forEach(r => { r.items.forEach(i => m[i.category] = (m[i.category] || 0) + i.amount);
+                    if (r.tax) m.Tax = (m.Tax || 0) + r.tax; });
   return Object.entries(m).filter(([, a]) => a > 0.004).sort((a, b) => b[1] - a[1]);
 }
 function setupSlicer(){
@@ -255,11 +259,10 @@ function renderOverview(){
 
   const short = m => monthName(m).replace(/ 20(\d\d)$/, " ’$1");
   const inMonth = m => rs.filter(r => monthKey(r.date) === m);
-  if (one){   // one month: it against the 5 before it, with the budget line
-    const all = st === "all" ? RECEIPTS : RECEIPTS.filter(r => r.store === st), i = ms.indexOf(sel[0]);
-    const win = ms.slice(Math.max(0, i - 5), i + 1).map(m => ({label: short(m), m, value: sum(all.filter(r => monthKey(r.date) === m), total)}));
-    document.getElementById("ovTrips").innerHTML = monthBarsSVG(win, sel[0], BUDGET);
-    document.getElementById("ovTripsLabel").textContent = "this month and the 5 before";
+  if (one){   // one month: only that month, one bar per shopping trip
+    const trips = [...rs].sort((a, b) => a.date.localeCompare(b.date) || String(a.time || "").localeCompare(String(b.time || "")));
+    document.getElementById("ovTrips").innerHTML = stackedSVG(trips.map(r => ({label: fmt(r.date, {day: "numeric", month: "short"}), parts: partsOf([r])})));
+    document.getElementById("ovTripsLabel").textContent = `each trip in ${monthName(sel[0]).split(" ")[0]}`;
   } else {
     document.getElementById("ovTrips").innerHTML = stackedSVG(sel.map(m => ({label: short(m), parts: partsOf(inMonth(m))})));
     document.getElementById("ovTripsLabel").textContent = "by category";
@@ -274,16 +277,16 @@ function renderOverview(){
     `<div class="catrow" style="grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 70px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(title(n))}</span><div class="track"><i style="width:${v.amt / tmax * 100}%;background:${cc(v.cat)}"></i></div><span class="right num">${money(v.amt)}</span></div>`).join("") : '<div class="empty">Nothing in this period.</div>';
   const cats = partsOf(rs), cmax = cats.length ? cats[0][1] : 1;
   document.getElementById("anCats").innerHTML = cats.length ? cats.map(([c, a]) => {
-    const drill = c !== "Tax" && c !== "Not itemized";
-    return `<div class="catrow" ${drill ? `role="button" tabindex="0" data-cat="${esc(c)}" style="cursor:pointer"` : ""}><span class="ci" style="color:${cc(c)}">${ci(c)}</span><span>${esc(c)}${c === "Not itemized" ? ' <span class="muted" style="font-size:12.5px">(lines the scan missed)</span>' : ""}</span><div class="track"><i style="width:${a / cmax * 100}%;background:${cc(c)}"></i></div><span class="right num">${money(a)}</span><span class="right muted num pct">${Math.round(a / spent * 100)}%</span></div>`; }).join("")
+    const drill = c !== "Tax";
+    return `<div class="catrow" ${drill ? `role="button" tabindex="0" data-cat="${esc(c)}" style="cursor:pointer"` : ""}><span class="ci" style="color:${cc(c)}">${ci(c)}</span><span>${esc(c)}</span><div class="track"><i style="width:${a / cmax * 100}%;background:${cc(c)}"></i></div><span class="right num">${money(a)}</span><span class="right muted num pct">${Math.round(a / spent * 100)}%</span></div>`; }).join("")
     : '<div class="empty">Nothing in this period. Try a wider one.</div>';
   document.querySelectorAll("#anCats [data-cat]").forEach(el => { const go = () => drillCat(el.dataset.cat);
     el.addEventListener("click", go); el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } }); });
   document.getElementById("anDrill").hidden = true;
 
   const ins = [], up = priceChanges().filter(p => p.change > .005).sort((a, b) => b.change - a.change)[0];
-  if (up) ins.push(["#B7791F", "up", `${title(up.name)} up ${Math.round(up.change * 100)}%`, `${money(up.first)} → ${money(up.last)} since ${fmt(up.from)}`]);
-  const ic = cats.filter(([c]) => c !== "Tax" && c !== "Not itemized");
+  if (up) ins.push(["#B7791F", "up", `${title(up.name)} up ${Math.round(up.change * 100)}%`, `${money(up.first)}${up.unit} → ${money(up.last)}${up.unit} since ${fmt(up.from)}`]);
+  const ic = cats.filter(([c]) => c !== "Tax");
   if (ic.length) ins.push([cc(ic[0][0]), (CAT[ic[0][0]] || CAT.Other)[1], `${ic[0][0]} leads`, `${Math.round(ic[0][1] / spent * 100)}% of ${label}`]);
   const bags = sum(items.filter(l => /REUBL|BAG/i.test(l.name)));
   if (bags) ins.push(["#2F7A3B", "bag", `Bags: ${money(bags)}`, "Bring your own to skip the fee"]);
@@ -389,23 +392,24 @@ document.getElementById("bulkFile").addEventListener("change", async e => {
 // ---------- drill-down (used by the Dashboard) ----------
 function drillCat(cat){
   const rows = dashLines().filter(r => r.category === cat), box = document.getElementById("anDrill");
-  const by = {}; rows.forEach(r => { const o = by[r.name] = by[r.name] || {n:0, qty:0, amt:0, prices:[]}; o.n++; o.qty += r.qty; o.amt += r.amount; o.prices.push([r.date, r.unit_price]); });
+  const by = {}; rows.forEach(r => { const o = by[r.name] = by[r.name] || {n:0, qty:0, kg:0, amt:0, prices:[]}; o.n++; o.qty += r.qty; if (r.unit === "kg") o.kg += r.qty; o.amt += r.amount; o.prices.push([r.date, r.unit_price]); });
   const list = Object.entries(by).sort((a, b) => b[1].amt - a[1].amt);
   box.hidden = false;
   box.innerHTML = `<h2><span style="display:flex;align-items:center;gap:8px"><span style="color:${cc(cat)};font-size:20px">${ci(cat)}</span>${esc(cat)}</span><span class="aside">select an item for its price history</span></h2>
     <div class="tablewrap"><table><thead><tr><th>Item</th><th class="right">Times bought</th><th class="right">Quantity</th><th class="right">Spent</th><th class="right">Last price</th></tr></thead><tbody>${
     list.map(([n, o]) => { o.prices.sort((x, y) => x[0].localeCompare(y[0]));
-      return `<tr class="click" data-item="${esc(n)}" tabindex="0"><td>${esc(title(n))}</td><td class="right num">${o.n}</td><td class="right num">${Math.round(o.qty*1000)/1000}</td><td class="right num">${money(o.amt)}</td><td class="right num">${money(o.prices[o.prices.length-1][1])}</td></tr>`; }).join("")}</tbody></table></div><div id="anItem"></div>`;
+      return `<tr class="click" data-item="${esc(n)}" tabindex="0"><td>${esc(title(n))}</td><td class="right num">${o.n}</td><td class="right num">${o.kg ? Math.round(o.kg * 1000) / 1000 + " kg" : o.n === o.qty ? o.qty : Math.round(o.qty * 1000) / 1000}</td><td class="right num">${money(o.amt)}</td><td class="right num">${(() => { const s = priceSeries(n), p = s.points; return p.length ? money(p[p.length - 1].value) + (s.unit === "/kg" ? "/kg" : "") : "–"; })()}</td></tr>`; }).join("")}</tbody></table></div><div id="anItem"></div>`;
   box.querySelectorAll("[data-item]").forEach(tr => { const go = () => drillItem(tr.dataset.item);
     tr.addEventListener("click", go); tr.addEventListener("keydown", e => { if (e.key === "Enter") go(); }); });
   box.scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start"});
 }
 function drillItem(name){
-  const rows = lines().filter(l => l.name === name).sort((a, b) => a.date.localeCompare(b.date));
-  const f = rows[0].unit_price, l = rows[rows.length-1].unit_price, ch = f ? l/f - 1 : 0;
-  document.getElementById("anItem").innerHTML = `<div style="margin-top:18px"><h2 style="margin-bottom:6px">${esc(title(name))}</h2>
-    <p class="muted" style="margin:0 0 6px">Bought ${rows.length} time${rows.length > 1 ? "s" : ""}. ${rows.length > 1 ? `Price went from ${money(f)} to ${money(l)} (${ch >= 0 ? "+" : ""}${Math.round(ch*100)}%).` : ""}</p>
-    ${lineSVG(rows.map(r => ({label: fmt(r.date), value: r.unit_price})))}</div>`;
+  const s = priceSeries(name), p = s.points, f = p[0].value, l = p[p.length - 1].value, ch = f ? l / f - 1 : 0;
+  const what = s.unit === "/kg" ? "Price per kg" : "Price per item";
+  const note = s.left ? ` ${s.left} purchase${s.left > 1 ? "s were" : " was"} read without a weight, so ${s.left > 1 ? "they aren’t" : "it isn’t"} shown.` : "";
+  document.getElementById("anItem").innerHTML = `<div style="margin-top:18px"><h2 style="margin-bottom:6px">${esc(title(name))} <span class="aside">${what}</span></h2>
+    <p class="muted" style="margin:0 0 6px">Bought ${s.all} time${s.all > 1 ? "s" : ""}.${p.length > 1 ? ` ${what} went from ${money(f)}${s.unit} to ${money(l)}${s.unit} (${ch >= 0 ? "+" : ""}${Math.round(ch * 100)}%).` : ""}${note}</p>
+    ${lineSVG(p.map(x => ({label: fmt(x.date), value: x.value})), s.unit === "/kg" ? "/kg" : "")}</div>`;
 }
 
 // ---------- REPORTS ----------
@@ -541,7 +545,7 @@ const avColor = s => AV[[...String(s)].reduce((h, c) => (h * 31 + c.charCodeAt(0
 const avatar = s => `<span class="av" style="background:${avColor(s)}">${esc((String(s).trim()[0] || "?").toUpperCase())}</span>`;
 function statusChip(r, dups){
   if (dups[r.id]) return `<span class="chip ${dups[r.id].exact ? "bad" : "warn"}">${dups[r.id].exact ? "Duplicate" : "Possible duplicate"}</span>`;
-  if (r.printed && Math.abs(sum(r.items) - r.subtotal) >= 0.01) return '<span class="chip warn">Check items</span>';
+  if (r.printed && Math.abs(sum(r.items) - r.printed_sub) >= 0.01) return '<span class="chip warn">Check items</span>';
   return "";
 }
 const rowHTML = (r, dups, sel) => `<button class="row${sel ? " sel" : ""}" data-rid="${esc(r.id)}">${avatar(r.store)}
@@ -613,10 +617,10 @@ function renderReceipts(){
 function renderDetail(dups){
   const el = document.getElementById("rcDetail"), r = RECEIPTS.find(x => x.id === SEL_RC);
   if (!r){ el.innerHTML = '<div class="empty">Select a receipt to see its items.</div>'; document.getElementById("rcWrap").classList.remove("open"); return; }
-  const lineSum = sum(r.items), ok = r.printed && Math.abs(lineSum - r.subtotal) < 0.01, dup = dups[r.id];
+  const lineSum = sum(r.items), ok = r.printed && Math.abs(lineSum - r.printed_sub) < 0.01, dup = dups[r.id];
   const status = dup ? `<div class="status ${dup.exact ? "err" : "warn"}">${IC.warn}<div><b>${dup.exact ? "This is a copy" : "This may be a copy"}</b> of the ${esc(dup.of.store)} receipt from ${fmt(dup.of.date)}${dup.of.time ? " at " + niceTime(dup.of.time) : ""} (${money(total(dup.of))}). Delete this one to keep your totals right.</div></div>`
     : !r.printed ? "" : ok ? `<div class="status ok">${IC.check}<div>The items match the subtotal on the receipt.</div></div>`
-    : `<div class="status warn">${IC.warn}<div>The items add up to ${money(lineSum)}, but the receipt says ${money(r.subtotal)}. A line may be missing or misread.</div></div>`;
+    : `<div class="status warn">${IC.warn}<div>The items add up to ${money(lineSum)}, but the subtotal printed on the receipt was read as ${money(r.printed_sub)}. Either a line was missed or the subtotal was misread. Your totals use the items.</div></div>`;
   el.innerHTML = `<button class="btn back" id="rcBack">${IC.back}All receipts</button>
     <div class="dh">${avatar(r.store)}<div><b style="font-size:18px">${esc(r.store)}</b><div class="meta">${fmt(r.date, {weekday:"long", day:"numeric", month:"long", year:"numeric"})}${r.time ? ", " + niceTime(r.time) : ""}</div></div></div>
     <div class="tot num">${money(total(r))}</div>

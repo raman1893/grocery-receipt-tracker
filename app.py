@@ -69,6 +69,7 @@ Rules:
 - One entry per purchased line. "amount" is the line total printed on the right.
 - Multi-buy lines like "2 @ $2.79  5.58": qty 2, unit "ea", unit_price 2.79, amount 5.58.
 - Weighed items like "0.925 kg @ $1.52/kg  1.41": qty 0.925, unit "kg", unit_price 1.52, amount 1.41.
+- A weight line like "0.365 kg @ $8.80/kg" always belongs to the item name printed just above it, even when that item's amount is printed on the name's row instead of the weight row: still qty 0.365, unit "kg", unit_price 8.80.
 - "department" is the section header the item is printed under (e.g. "DAIRY"), or "" if there is none.
 - "category" must be one of: {", ".join(CATEGORIES)}.
 - Small fees are purchases too: include reusable bags (e.g. "REUBL SHRT PC" under OTHER SERVICES), deposits and eco fees.
@@ -209,9 +210,15 @@ def to_receipt(text):
             cat = str(it.get("category") or "").strip()
             if cat not in CATEGORIES:                  # model gave no/unknown category: use rules
                 cat = rule_category(name, dept) or "Other"
-        items.append({"item": name, "qty": _num(it.get("qty")) or 1,
-                      "unit": str(it.get("unit") or "ea").lower(),
-                      "unit_price": _num(it.get("unit_price")), "amount": amount,
+        qty, unit, price = _num(it.get("qty")) or 1, str(it.get("unit") or "ea").lower(), _num(it.get("unit_price"))
+        if unit in ("kg", "/kg", "kgs"):
+            unit = "kg"
+            # amount is the most reliable number on the line; keep the price per kg consistent with it
+            if qty and (not price or abs(qty * price - amount) > 0.05):
+                price = round(amount / qty, 2)
+        elif not price:
+            price = round(amount / qty, 2) if qty else amount
+        items.append({"item": name, "qty": qty, "unit": unit, "unit_price": price, "amount": amount,
                       "department": dept, "category": cat})
 
     try:
@@ -960,8 +967,11 @@ def api_data():
                 "id": str(rid),
                 "date": str(g["receipt_date"].iloc[0])[:10],
                 "store": g["store"].iloc[0] or "Unknown store",
-                "subtotal": round(float(printed if printed is not None else items["amount"].sum()), 2),
+                # Spend is the lines that were read (+ tax). The printed subtotal is only used to
+                # check the reading, because the model can misread it as easily as a line.
+                "subtotal": round(float(items["amount"].sum()), 2),
                 "printed": printed is not None,
+                "printed_sub": round(float(printed), 2) if printed is not None else None,
                 "time": rtime,
                 "ref": rref,
                 "tax": round(float(g.loc[g["category"] == "Tax", "amount"].sum()), 2),
