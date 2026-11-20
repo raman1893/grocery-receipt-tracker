@@ -591,9 +591,29 @@ function renderHome(){
 document.getElementById("hmBudget").addEventListener("click", () => openBudget());
 
 // ---------- RECEIPTS ----------
-let SEL_RC = null, CONFIRM_DEL = false;
+let SEL_RC = null, CONFIRM_DEL = false, EDIT_LINE = null;   // EDIT_LINE: a line_id, or "new"
+function suspects(r){   // line_ids that look shifted (same amount as a neighbour, or weight x price != amount)
+  const s = new Set(), it = r.items;
+  it.forEach((a, k) => { const b = it[k + 1];
+    if (b && Math.abs(a.amount - b.amount) < 0.005 && a.name !== b.name){ s.add(a.line_id); s.add(b.line_id); }
+    if (a.unit === "kg" && a.qty && a.unit_price != null && Math.abs(a.qty * a.unit_price - a.amount) > 0.02) s.add(a.line_id); });
+  return s;
+}
+function lineForm(i){   // inline editor for one line (or a new one)
+  const cats = Object.keys(CAT).filter(c => c !== "Tax"), kg = i.unit === "kg";
+  return `<form class="lineform" data-id="${i.line_id || "new"}">
+    <label class="lf-wide">Item<input name="name" value="${esc(i.name || "")}" required></label>
+    <label>Sold<select name="unit"><option value="ea"${kg ? "" : " selected"}>each</option><option value="kg"${kg ? " selected" : ""}>by weight (kg)</option></select></label>
+    <label><span class="lf-q">${kg ? "Weight (kg)" : "Quantity"}</span><input name="qty" type="number" step="0.001" min="0" inputmode="decimal" value="${i.qty ?? 1}"></label>
+    <label><span class="lf-p">${kg ? "Price per kg" : "Price each"}</span><input name="unit_price" type="number" step="0.01" min="0" inputmode="decimal" value="${i.unit_price ?? ""}"></label>
+    <label>Amount paid<input name="amount" type="number" step="0.01" min="0" inputmode="decimal" value="${i.amount ?? ""}" required></label>
+    <label class="lf-wide">Category<select name="category">${cats.map(c => `<option${c === (i.category || "Produce") ? " selected" : ""}>${esc(c)}</option>`).join("")}</select></label>
+    <div class="lf-btns">${i.line_id ? `<button type="button" class="btn danger lf-del">${IC.trash}Remove line</button>` : ""}<span style="flex:1"></span>
+      <button type="button" class="btn lf-cancel">Cancel</button><button type="submit" class="btn primary">Save</button></div>
+  </form>`;
+}
 function openReceipt(id){
-  SEL_RC = id; CONFIRM_DEL = false;
+  SEL_RC = id; CONFIRM_DEL = false; EDIT_LINE = null;
   if (location.hash !== "#receipts") location.hash = "#receipts"; else renderReceipts();
   document.getElementById("rcWrap").classList.add("open");
 }
@@ -618,21 +638,46 @@ function renderDetail(dups){
   const el = document.getElementById("rcDetail"), r = RECEIPTS.find(x => x.id === SEL_RC);
   if (!r){ el.innerHTML = '<div class="empty">Select a receipt to see its items.</div>'; document.getElementById("rcWrap").classList.remove("open"); return; }
   const lineSum = sum(r.items), ok = r.printed && Math.abs(lineSum - r.printed_sub) < 0.01, dup = dups[r.id];
+  const sus = ok ? new Set() : suspects(r);
   const status = dup ? `<div class="status ${dup.exact ? "err" : "warn"}">${IC.warn}<div><b>${dup.exact ? "This is a copy" : "This may be a copy"}</b> of the ${esc(dup.of.store)} receipt from ${fmt(dup.of.date)}${dup.of.time ? " at " + niceTime(dup.of.time) : ""} (${money(total(dup.of))}). Delete this one to keep your totals right.</div></div>`
     : !r.printed ? "" : ok ? `<div class="status ok">${IC.check}<div>The items match the subtotal on the receipt.</div></div>`
-    : `<div class="status warn">${IC.warn}<div>The items add up to ${money(lineSum)}, but the subtotal printed on the receipt was read as ${money(r.printed_sub)}. Either a line was missed or the subtotal was misread. Your totals use the items.</div></div>`;
+    : `<div class="status warn">${IC.warn}<div><b>The items add up to ${money(lineSum)}, but the receipt says ${money(r.printed_sub)}</b> (${money(Math.abs(lineSum - r.printed_sub))} ${lineSum > r.printed_sub ? "too much" : "missing"}). ${sus.size ? "Lines marked ● look shifted. " : ""}Tap a line to fix it${lineSum < r.printed_sub ? ", or add the missing one" : ""}. It checks again as soon as you save.</div></div>`;
   el.innerHTML = `<button class="btn back" id="rcBack">${IC.back}All receipts</button>
     <div class="dh">${avatar(r.store)}<div><b style="font-size:18px">${esc(r.store)}</b><div class="meta">${fmt(r.date, {weekday:"long", day:"numeric", month:"long", year:"numeric"})}${r.time ? ", " + niceTime(r.time) : ""}</div></div></div>
     <div class="tot num">${money(total(r))}</div>
     <div class="meta">${r.items.length} items${r.ref ? ` · Ref ${esc(r.ref)}` : ""}</div>
     <div style="margin-top:14px">${status}</div>
-    <div class="il">${r.items.map(i => `<div><span>${esc(title(String(i.name)))}<small>${esc(i.category)}${i.unit_price != null && (i.qty !== 1 || i.unit === "kg") ? ` · ${i.qty}${i.unit === "kg" ? " kg" : ""} × ${money(i.unit_price)}` : ""}</small></span><span class="num">${money(i.amount)}</span></div>`).join("")}</div>
+    <div class="il">${r.items.map(i => EDIT_LINE === i.line_id ? lineForm(i) : `<div class="li" role="button" tabindex="0" data-line="${i.line_id}" title="Tap to fix this line"><span>${sus.has(i.line_id) ? '<i class="sus" title="Looks shifted">●</i>' : ""}${esc(title(String(i.name)))}<small>${esc(i.category)}${i.unit === "kg" ? ` · ${i.qty} kg × ${money(i.unit_price)}/kg` : i.qty !== 1 ? ` · ${i.qty} × ${money(i.unit_price)}` : ""}</small></span><span class="num">${money(i.amount)} <span class="pen">${IC.pencil}</span></span></div>`).join("")}
+      ${EDIT_LINE === "new" ? lineForm({}) : `<button class="btn addline" id="rcAddLine">${IC.plus}Add a missing line</button>`}</div>
     <div class="sumr"><span class="muted">Subtotal</span><span class="num">${money(r.subtotal)}</span></div>
     <div class="sumr"><span class="muted">Tax</span><span class="num">${money(r.tax)}</span></div>
     <div class="sumr" style="font-weight:700"><span>Total</span><span class="num">${money(total(r))}</span></div>
     <div style="margin-top:18px">${CONFIRM_DEL
       ? `<div class="confirm show" style="margin-top:0"><span>Delete this receipt and its ${r.items.length + (r.tax ? 1 : 0)} lines? This can’t be undone.</span><span style="flex:1"></span><button class="btn" id="rcNo">Cancel</button><button class="btn primary" id="rcYes" style="background:var(--red-text);border-color:var(--red-text)">Delete</button></div>`
       : `<button class="btn danger" id="rcDel">${IC.trash}Delete receipt</button>`}</div>`;
+  el.querySelectorAll(".li[data-line]").forEach(row => { const go = () => { EDIT_LINE = +row.dataset.line; CONFIRM_DEL = false; renderDetail(dups); };
+    row.onclick = go; row.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } }; });
+  const add = document.getElementById("rcAddLine"); if (add) add.onclick = () => { EDIT_LINE = "new"; renderDetail(dups); };
+  const form = el.querySelector(".lineform");
+  if (form){
+    const f = form.elements, sync = () => {   // weight x price fills in the amount
+      const kg = f.unit.value === "kg"; form.querySelector(".lf-q").textContent = kg ? "Weight (kg)" : "Quantity";
+      form.querySelector(".lf-p").textContent = kg ? "Price per kg" : "Price each"; };
+    f.unit.onchange = sync;
+    [f.qty, f.unit_price].forEach(x => x.oninput = () => { const q = +f.qty.value, p = +f.unit_price.value; if (q && p) f.amount.value = (q * p).toFixed(2); });
+    form.querySelector(".lf-cancel").onclick = () => { EDIT_LINE = null; renderDetail(dups); };
+    const rm = form.querySelector(".lf-del");
+    if (rm) rm.onclick = async () => { try { await call("api_delete_line", +form.dataset.id); EDIT_LINE = null; await loadData(); toast("Line removed."); }
+      catch (err) { toast("Couldn’t remove: " + (err && err.message || err)); } };
+    form.onsubmit = async e => { e.preventDefault();
+      const v = {name: f.name.value, unit: f.unit.value, qty: +f.qty.value || 1, unit_price: f.unit_price.value === "" ? null : +f.unit_price.value, amount: +f.amount.value, category: f.category.value};
+      try { if (form.dataset.id === "new") await call("api_add_line", r.id, v); else await call("api_update_line", +form.dataset.id, v);
+            EDIT_LINE = null; await loadData();
+            const nr = RECEIPTS.find(x => x.id === r.id);
+            toast(nr && nr.printed && Math.abs(sum(nr.items) - nr.printed_sub) < 0.01 ? "Saved. The items now match the receipt ✓" : "Saved."); }
+      catch (err) { toast("Couldn’t save: " + (err && err.message || err)); } };
+    f.name.focus();
+  }
   document.getElementById("rcBack").onclick = () => { SEL_RC = null; document.getElementById("rcWrap").classList.remove("open"); renderReceipts(); window.scrollTo(0, 0); };
   const del = document.getElementById("rcDel"); if (del) del.onclick = () => { CONFIRM_DEL = true; renderDetail(dups); };
   const no = document.getElementById("rcNo"); if (no) no.onclick = () => { CONFIRM_DEL = false; renderDetail(dups); };

@@ -70,6 +70,9 @@ Rules:
 - Multi-buy lines like "2 @ $2.79  5.58": qty 2, unit "ea", unit_price 2.79, amount 5.58.
 - Weighed items like "0.925 kg @ $1.52/kg  1.41": qty 0.925, unit "kg", unit_price 1.52, amount 1.41.
 - A weight line like "0.365 kg @ $8.80/kg" always belongs to the item name printed just above it, even when that item's amount is printed on the name's row instead of the weight row: still qty 0.365, unit "kg", unit_price 8.80.
+- Items WITHOUT a weight line under them (e.g. CILANTRO, BLUEBERRIES) are sold each: qty 1, unit "ea", with their own amount. Never give such an item the weight of a neighbouring line.
+- Every item has exactly one amount, and each printed amount belongs to exactly one item. Never repeat a neighbour's amount; if two lines seem to share an amount, you have shifted a line, so read that section again.
+- Check: for a weighed item, qty × unit_price must equal its amount (to within 1 cent).
 - "department" is the section header the item is printed under (e.g. "DAIRY"), or "" if there is none.
 - "category" must be one of: {", ".join(CATEGORIES)}.
 - Small fees are purchases too: include reusable bags (e.g. "REUBL SHRT PC" under OTHER SERVICES), deposits and eco fees.
@@ -115,6 +118,24 @@ def items_gap(r):
     return round(r["subtotal"] - sum(i["amount"] for i in r["items"]), 2)
 
 
+def suspect_lines(r):
+    """Lines that look shifted: neighbours with the same amount, or a weight that doesn't fit its amount."""
+    out, items = [], (r or {}).get("items") or []
+    for a, b in zip(items, items[1:]):
+        if a["amount"] == b["amount"] and a["item"] != b["item"]:
+            out.append(f'{a["item"]} and {b["item"]} were both given {a["amount"]:.2f}')
+    for i in items:
+        if i["unit"] == "kg" and i["qty"] and i.get("unit_price") and abs(i["qty"] * i["unit_price"] - i["amount"]) > 0.02:
+            out.append(f'{i["item"]}: {i["qty"]} kg x {i["unit_price"]:.2f} does not equal {i["amount"]:.2f}')
+    return out
+
+
+def suspect_hint(r):
+    s = suspect_lines(r)
+    return ("" if not s else " These lines look shifted: " + "; ".join(s) +
+            ". Each item has its own amount; re-read those lines one at a time.")
+
+
 def read_with_check(image):
     """Read the receipt; if items don't add up to the subtotal, ask the model to look again."""
     text = read_receipt(image)
@@ -126,7 +147,7 @@ def read_with_check(image):
                 f"A line worth about {abs(gap):.2f} is "
                 f"{'missing' if gap > 0 else 'extra or misread'}. Look again carefully, "
                 f"especially at the first line under each header and at small fees such as a reusable bag, "
-                f"and return the complete JSON.")
+                f"and return the complete JSON." + suspect_hint(r))
         text2 = read_receipt(image, hint)
         r2 = to_receipt(text2)
         gap2 = items_gap(r2)
@@ -905,7 +926,9 @@ def process_receipt(image, date_override="", store_override=""):
         matched = False
         message += (f"  \nThe items add up to ${r['subtotal'] - gap:,.2f}, but the receipt's "
                     f"subtotal is ${r['subtotal']:,.2f}, so a line worth about ${abs(gap):,.2f} "
-                    f"seems to be {'missing' if gap > 0 else 'extra or misread'}.")
+                    f"seems to be {'missing' if gap > 0 else 'extra or misread'}."
+                    + (" Check: " + "; ".join(suspect_lines(r)) + "." if suspect_lines(r) else "")
+                    + " Tap View receipt, then tap a line to fix it.")
     message += date_note
     if replaced:
         message += (f"  \n**Replaced an earlier copy of this receipt** that had been misread "
@@ -975,7 +998,7 @@ def api_data():
                 "time": rtime,
                 "ref": rref,
                 "tax": round(float(g.loc[g["category"] == "Tax", "amount"].sum()), 2),
-                "items": [{"name": r.item, "qty": _clean(r.qty) or 1, "unit": r.unit or "ea",
+                "items": [{"line_id": int(r.id), "name": r.item, "qty": _clean(r.qty) or 1, "unit": r.unit or "ea",
                            "unit_price": _clean(r.unit_price), "amount": round(float(r.amount), 2),
                            "category": r.category or "Other"} for r in items.itertuples()],
             })
@@ -1063,6 +1086,42 @@ def api_save_budgets(budget, cat_budgets):
     return True
 
 
+def _line_fields(f):
+    """Validate a line typed in on the page."""
+    name = str(f.get("name") or "").strip()[:80]
+    amount = round(float(f.get("amount") or 0), 2)
+    qty = float(f.get("qty") or 1)
+    unit = "kg" if str(f.get("unit")) == "kg" else "ea"
+    price = f.get("unit_price")
+    price = round(float(price), 2) if price not in (None, "") else round(amount / qty, 2) if qty else amount
+    cat = f.get("category") if f.get("category") in CATEGORIES else "Other"
+    if not name or amount <= 0 or qty <= 0:
+        raise ValueError("A line needs a name, an amount above 0 and a quantity above 0.")
+    return dict(item=name, qty=qty, unit=unit, unit_price=price, amount=amount, category=cat)
+
+
+def api_update_line(line_id, fields):
+    v = _line_fields(fields or {})
+    n = db_run("""UPDATE expenses SET item=:item, qty=:qty, unit=:unit, unit_price=:unit_price,
+                  amount=:amount, category=:category WHERE id=:id AND category <> 'Tax'""", id=int(line_id), **v)
+    return {"updated": n}
+
+
+def api_add_line(receipt_id, fields):
+    v = _line_fields(fields or {})
+    row = db_rows("SELECT receipt_date, store, created_at FROM expenses WHERE receipt_id=:r LIMIT 1", r=str(receipt_id))
+    if not row:
+        raise ValueError("That receipt no longer exists.")
+    d, s, c = row[0]
+    save_rows(pd.DataFrame([{**v, "department": "", "receipt_id": str(receipt_id), "receipt_date": d,
+                             "store": s, "created_at": c}]))
+    return {"added": 1}
+
+
+def api_delete_line(line_id):
+    return {"deleted": db_run("DELETE FROM expenses WHERE id=:id AND category <> 'Tax'", id=int(line_id))}
+
+
 def api_set_pref(key, value):
     if key not in PREF_KEYS:
         return False
@@ -1128,6 +1187,9 @@ PAGE_FUNCTIONS = [
     _page_fn("api_save_budgets", lambda args: api_save_budgets(*args)),
     _page_fn("api_phone_url", lambda origin: api_phone_url(origin)),
     _page_fn("api_set_pref", lambda args: api_set_pref(*args)),
+    _page_fn("api_update_line", lambda args: api_update_line(*args)),
+    _page_fn("api_add_line", lambda args: api_add_line(*args)),
+    _page_fn("api_delete_line", lambda line_id: api_delete_line(line_id)),
 ]
 
 with gr.Blocks(title="FreshAnalytics", fill_width=True) as demo:
